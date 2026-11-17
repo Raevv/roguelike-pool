@@ -12,8 +12,9 @@ public static class PocketTest
 
     static void Aim(float deg)
     {
-        typeof(CueController).GetField("aimAngle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            .SetValue(Cue, deg * Mathf.Deg2Rad);
+        foreach (var n in new[] { "aimAngle", "targetAngle" })
+            typeof(CueController).GetField(n, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .SetValue(Cue, deg * Mathf.Deg2Rad);
     }
 
     static string State() => $"onTable={Ball.All.Count} [{string.Join(",", Ball.All.Select(b => b.Number).OrderBy(n => n))}]";

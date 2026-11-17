@@ -62,6 +62,13 @@ namespace RoguelikePool
             return cam.ScreenToWorldPoint(new Vector3(screen.x / Scale, screen.y / Scale, 0f));
         }
 
+        /// <summary>Inverse of <see cref="ScreenToWorld"/>: world point → real screen pixels.</summary>
+        public Vector2 WorldToScreen(Vector2 world)
+        {
+            Vector3 low = cam.WorldToScreenPoint(world); // pixels of the low-res target
+            return new Vector2(low.x, low.y) * Scale;
+        }
+
         void LateUpdate() => Refresh();
 
         public void Refresh()

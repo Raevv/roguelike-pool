@@ -12,6 +12,7 @@ public static class ShotTest
         var ball = Ball.All[0];
         var f = typeof(CueController).GetField("aimAngle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         f.SetValue(cue, angleDeg * Mathf.Deg2Rad);
+        typeof(CueController).GetField("targetAngle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(cue, angleDeg * Mathf.Deg2Rad);
         ui.Power = power;
         await Task.Delay(100);
         var bounce = GameObject.Find("BounceLine").GetComponent<LineRenderer>();

@@ -24,11 +24,11 @@ namespace RoguelikePool
 
         [Header("Poches")]
         [Tooltip("Distance entre le coin de la surface et le bout de chaque bande, le long de la bande. Ouverture ≈ valeur × 1,41.")]
-        public float cornerMouthOffset = 0.9f;
+        public float cornerMouthOffset = 1.294f;
         [Tooltip("Demi-ouverture des poches du milieu.")]
-        public float sideMouthHalfWidth = 0.7f;
-        public float cornerPocketRadius = 0.62f;
-        public float sidePocketRadius = 0.58f;
+        public float sideMouthHalfWidth = 1.006f;
+        public float cornerPocketRadius = 0.891f;
+        public float sidePocketRadius = 0.834f;
         [Tooltip("Décalage du centre des poches de coin vers l'extérieur (en diagonale).")]
         public float cornerPocketOffset = 0.1f;
 
@@ -149,7 +149,7 @@ namespace RoguelikePool
             go.transform.SetParent(transform, false);
             go.transform.localPosition = pos;
             var pocket = go.AddComponent<Pocket>();
-            pocket.captureRadius = radius;
+            pocket.radius = radius;
             pockets.Add(pocket);
         }
     }

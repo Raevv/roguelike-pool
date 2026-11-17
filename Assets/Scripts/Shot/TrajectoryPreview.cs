@@ -72,7 +72,7 @@ namespace RoguelikePool
 
         SpriteRenderer CreateGhost()
         {
-            // 13 px ring matching the ball sprites, with a faint flat inner tint.
+            // Ring matching the ball sprites, with a faint flat inner tint.
             const int S = BallArt.Size;
             var px = new Color32[S * S];
             const float r = S / 2f;
@@ -109,7 +109,7 @@ namespace RoguelikePool
             bool hasHit = Cast(origin, radius, direction, maxDistance, ball.Collider, out RaycastHit2D hit);
 
             // The path ends early if the ball's center passes over a pocket first.
-            if (FirstPocketEntry(origin, direction, hasHit ? hit.distance : maxDistance, pockets, out float pocketDistance))
+            if (FirstPocketEntry(ball, origin, direction, hasHit ? hit.distance : maxDistance, pockets, out float pocketDistance))
             {
                 Vector2 end = origin + direction * pocketDistance;
                 SetLine(aimLine, origin, end);
@@ -159,15 +159,15 @@ namespace RoguelikePool
             Vector2 start = contact + n * 0.01f;
             if (Cast(start, radius, next, bounceLength, ball.Collider, out RaycastHit2D second))
                 length = second.distance;
-            if (FirstPocketEntry(contact, next, length, pockets, out float bouncePocket))
+            if (FirstPocketEntry(ball, contact, next, length, pockets, out float bouncePocket))
                 length = bouncePocket;
 
             bounceLine.enabled = true;
             SetLine(bounceLine, contact, contact + next * length);
         }
 
-        /// <summary>Distance along the ray at which the ball center first enters a pocket's capture circle.</summary>
-        static bool FirstPocketEntry(Vector2 origin, Vector2 dir, float maxDist, IReadOnlyList<Pocket> pockets, out float distance)
+        /// <summary>Distance along the ray at which the ball center first enters a pocket's capture circle (for this ball).</summary>
+        static bool FirstPocketEntry(Ball ball, Vector2 origin, Vector2 dir, float maxDist, IReadOnlyList<Pocket> pockets, out float distance)
         {
             distance = float.MaxValue;
             if (pockets == null) return false;
@@ -175,7 +175,8 @@ namespace RoguelikePool
             {
                 Vector2 m = origin - (Vector2)pocket.transform.position;
                 float b = Vector2.Dot(m, dir);
-                float c = m.sqrMagnitude - pocket.captureRadius * pocket.captureRadius;
+                float r = pocket.CaptureRadiusFor(ball);
+                float c = m.sqrMagnitude - r * r;
                 if (c > 0f && b > 0f) continue; // outside and moving away
                 float disc = b * b - c;
                 if (disc < 0f) continue;        // misses the circle

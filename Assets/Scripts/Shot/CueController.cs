@@ -5,11 +5,15 @@ using UnityEngine.InputSystem;
 namespace RoguelikePool
 {
     /// <summary>
-    /// Aiming and shooting. Press and drag (mouse left button or finger) to swing the cue around the
-    /// cue ball: the cue sits on the pointer side, the ball leaves the opposite way. Fine aim (Shift,
-    /// or the VISÉE FINE toggle) slows the rotation down. Power comes from <see cref="ShotUI"/>; the
-    /// shot is fired with the TIRER button (or Space). Shooting is only possible when every ball has
-    /// stopped and no cancelled shot is being rewound. A table snapshot is taken right before each shot.
+    /// Aiming and shooting. Aim is relative: press anywhere on the table and drag around the cue ball;
+    /// only the finger motion tangent to the cue ball turns the cue, at a fixed sensitivity (degrees per
+    /// screen height), so precision no longer depends on how close the finger is to the ball. A quick
+    /// tap (no drag) points the shot at the tapped spot. Fine aim (Shift, or the VISÉE FINE toggle)
+    /// divides the sensitivity. The displayed/shot angle eases toward the input angle over a few
+    /// milliseconds so integer pointer steps never show as notches.
+    /// Power comes from <see cref="ShotUI"/>; the shot is fired with the TIRER button (or Space).
+    /// Shooting is only possible when every ball has stopped and no cancelled shot is being rewound.
+    /// A table snapshot is taken right before each shot.
     /// </summary>
     public class CueController : MonoBehaviour
     {
@@ -19,9 +23,16 @@ namespace RoguelikePool
         public float strikeDuration = 0.07f;
 
         [Header("Visée")]
-        [Tooltip("Multiplicateur de rotation en visée fine.")]
-        public float fineAimFactor = 0.1f;
-        [Tooltip("Rotation aux flèches gauche/droite (°/s). Divisée par 10 en visée fine.")]
+        [Tooltip("Rotation (°) pour un glissé tangentiel de toute la hauteur de l'écran.")]
+        public float aimDegreesPerScreenHeight = 150f;
+        [Tooltip("Multiplicateur de sensibilité en visée fine.")]
+        public float fineAimFactor = 0.15f;
+        [Tooltip("Lissage de la rotation affichée (s). 0 = aucun.")]
+        public float aimSmoothing = 0.035f;
+        [Tooltip("Un appui relâché sans glisser plus que ça (en fraction de hauteur d'écran) vise le point touché.")]
+        public float tapMoveTolerance = 0.012f;
+        public float tapMaxDuration = 0.3f;
+        [Tooltip("Rotation aux flèches gauche/droite (°/s). Multipliée par le facteur de visée fine.")]
         public float keyboardAimSpeed = 30f;
 
         [Header("Canne (visuel)")]
@@ -36,8 +47,12 @@ namespace RoguelikePool
         Camera cam;
         Transform cue;
 
-        float aimAngle;          // radians, direction the cue ball will travel
-        float lastPointerAngle;
+        float aimAngle;          // radians, displayed/shot direction (eases toward targetAngle)
+        float targetAngle;       // radians, direction set by the input
+        Vector2 lastPointerScreen;
+        Vector2 pressScreen;
+        float pressTime;
+        bool tapCandidate;
         bool aiming;
         bool striking;
 
@@ -54,7 +69,7 @@ namespace RoguelikePool
             this.table = table;
             this.rules = rules;
             cam = Camera.main;
-            aimAngle = Mathf.PI / 2f; // toward the rack (up)
+            aimAngle = targetAngle = Mathf.PI / 2f; // toward the rack (up)
             ui.ShootClicked += Shoot;
             BuildCue();
         }
@@ -80,6 +95,7 @@ namespace RoguelikePool
 
             HandlePointer();
             HandleKeyboardAndWheel();
+            EaseAim();
 
             cue.gameObject.SetActive(true);
             SetCuePose(AimDirection, maxPullBack * ui.Power);
@@ -90,32 +106,65 @@ namespace RoguelikePool
         {
             var pointer = Pointer.current; // mouse in the Editor, primary touch on mobile
             if (pointer == null) return;
-
             Vector2 screen = pointer.position.ReadValue();
-            Vector2 world = PixelCameraRig.Instance != null
-                ? PixelCameraRig.Instance.ScreenToWorld(screen) // world is rendered into a low-res texture
-                : (Vector2)cam.ScreenToWorldPoint(screen);
-            Vector2 toBall = cueBall.Body.position - world;
-            float pointerAngle = Mathf.Atan2(toBall.y, toBall.x);
-            bool usable = toBall.sqrMagnitude > cueBall.Radius * cueBall.Radius; // angle is unstable on top of the ball
 
             if (pointer.press.wasPressedThisFrame && !ui.IsOverUI(screen))
             {
                 aiming = true;
-                lastPointerAngle = pointerAngle;
-                if (!FineAim && usable) aimAngle = pointerAngle;
+                tapCandidate = true;
+                pressScreen = lastPointerScreen = screen;
+                pressTime = Time.unscaledTime;
             }
+            if (!aiming) return;
 
-            if (aiming && pointer.press.isPressed && usable)
+            if (pointer.press.isPressed)
             {
-                if (FineAim)
-                    aimAngle += Mathf.DeltaAngle(lastPointerAngle * Mathf.Rad2Deg, pointerAngle * Mathf.Rad2Deg) * Mathf.Deg2Rad * fineAimFactor;
-                else
-                    aimAngle = pointerAngle;
-                lastPointerAngle = pointerAngle;
+                if ((screen - pressScreen).magnitude > tapMoveTolerance * Screen.height) tapCandidate = false;
+
+                // Rotation from the finger motion tangent to the cue ball, at a constant sensitivity.
+                Vector2 ballScreen = WorldToScreen(cueBall.Body.position);
+                Vector2 radial = lastPointerScreen - ballScreen;
+                Vector2 delta = screen - lastPointerScreen;
+                if (radial.sqrMagnitude > 1f && delta.sqrMagnitude > 0f)
+                {
+                    float tangential = (radial.x * delta.y - radial.y * delta.x) / radial.magnitude; // px, + = counter-clockwise
+                    float degPerPixel = aimDegreesPerScreenHeight / Mathf.Max(1, Screen.height) * (FineAim ? fineAimFactor : 1f);
+                    targetAngle += tangential * degPerPixel * Mathf.Deg2Rad;
+                }
+                lastPointerScreen = screen;
             }
 
-            if (pointer.press.wasReleasedThisFrame) aiming = false;
+            if (pointer.press.wasReleasedThisFrame)
+            {
+                // Quick tap without dragging: aim the cue ball at the tapped spot.
+                if (tapCandidate && !FineAim && Time.unscaledTime - pressTime <= tapMaxDuration)
+                {
+                    Vector2 toTap = ScreenToWorld(screen) - cueBall.Body.position;
+                    if (toTap.sqrMagnitude > cueBall.Radius * cueBall.Radius)
+                        targetAngle = aimAngle + Mathf.DeltaAngle(aimAngle * Mathf.Rad2Deg, Mathf.Atan2(toTap.y, toTap.x) * Mathf.Rad2Deg) * Mathf.Deg2Rad;
+                }
+                aiming = false;
+            }
+        }
+
+        /// <summary>Eases the displayed angle toward the input angle (frame-rate independent).</summary>
+        void EaseAim()
+        {
+            if (aimSmoothing <= 0f) { aimAngle = targetAngle; return; }
+            float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime / aimSmoothing);
+            aimAngle += (targetAngle - aimAngle) * k;
+            if (Mathf.Abs(targetAngle - aimAngle) < 1e-5f) aimAngle = targetAngle;
+        }
+
+        Vector2 ScreenToWorld(Vector2 screen) => PixelCameraRig.Instance != null
+            ? PixelCameraRig.Instance.ScreenToWorld(screen) // world is rendered into a low-res texture
+            : (Vector2)cam.ScreenToWorldPoint(screen);
+
+        Vector2 WorldToScreen(Vector2 world)
+        {
+            return PixelCameraRig.Instance != null
+                ? PixelCameraRig.Instance.WorldToScreen(world)
+                : (Vector2)cam.WorldToScreenPoint(world);
         }
 
         void HandleKeyboardAndWheel()
@@ -130,8 +179,8 @@ namespace RoguelikePool
             var kb = Keyboard.current;
             if (kb == null) return;
             float speed = keyboardAimSpeed * (FineAim ? fineAimFactor : 1f) * Mathf.Deg2Rad * Time.deltaTime;
-            if (kb.leftArrowKey.isPressed) aimAngle += speed;
-            if (kb.rightArrowKey.isPressed) aimAngle -= speed;
+            if (kb.leftArrowKey.isPressed) targetAngle += speed;
+            if (kb.rightArrowKey.isPressed) targetAngle -= speed;
             if (kb.upArrowKey.wasPressedThisFrame) ui.Power += 0.01f;
             if (kb.downArrowKey.wasPressedThisFrame) ui.Power -= 0.01f;
             if (kb.spaceKey.wasPressedThisFrame) Shoot();
@@ -140,6 +189,7 @@ namespace RoguelikePool
         public void Shoot()
         {
             if (!CanShoot || ui.Power < 0.005f) return;
+            aimAngle = targetAngle; // shoot exactly where the input points, even mid-ease
             rules.TakeSnapshot();
             StartCoroutine(StrikeRoutine(AimDirection, ui.Power));
         }

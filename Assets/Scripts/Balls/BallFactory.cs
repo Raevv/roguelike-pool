@@ -4,13 +4,13 @@ using UnityEngine;
 namespace RoguelikePool
 {
     /// <summary>
-    /// Creates American pool balls: solids (1-7), black 8, stripes (9-15) and the cue ball, with
+    /// Creates the arcade ball set: solids (1-7), black 8, stripes (9-10) and the cue ball, with
     /// pixel-art sprites from <see cref="BallArt"/>, a drop shadow and collision sparks.
     /// Balls never rotate, so numbers stay upright.
     /// </summary>
     public static class BallFactory
     {
-        public const float DefaultRadius = 0.286f; // 57.15 mm diameter
+        public const float DefaultRadius = 0.446875f; // arcade: regulation 57.15 mm ball × 1.25 × 1.25
 
         public static bool IsStripe(int number) => number >= 9;
 
@@ -42,31 +42,32 @@ namespace RoguelikePool
         }
 
         /// <summary>
-        /// Standard 8-ball rack: apex on <paramref name="apex"/>, rows growing toward +Y (away from
-        /// the head). 1 at the apex, 8 in the middle of the third row, one solid and one stripe in
-        /// the back corners, the rest random.
+        /// Arcade 10-ball triangle (balls 1-10, 4 rows): apex on <paramref name="apex"/>, rows growing
+        /// toward +Y (away from the head). 1 at the apex, 8 in the middle of the third row, one solid
+        /// and one stripe in the back corners, the rest random.
         /// </summary>
-        public static List<Ball> CreateEightBallRack(Vector2 apex, float radius = DefaultRadius, float gap = 0.002f)
+        public static List<Ball> CreateRack(Vector2 apex, float radius = DefaultRadius, float gap = 0.002f)
         {
+            const int rows = 4;
             var solids = new List<int> { 2, 3, 4, 5, 6, 7 };
-            var stripes = new List<int> { 9, 10, 11, 12, 13, 14, 15 };
-            var slots = new int[15];
+            var stripes = new List<int> { 9, 10 };
+            var slots = new int[rows * (rows + 1) / 2];
             slots[0] = 1;
             slots[4] = 8;
             bool solidLeft = Random.value < 0.5f;
-            slots[10] = TakeRandom(solidLeft ? solids : stripes);
-            slots[14] = TakeRandom(solidLeft ? stripes : solids);
+            slots[6] = TakeRandom(solidLeft ? solids : stripes);
+            slots[9] = TakeRandom(solidLeft ? stripes : solids);
 
             var rest = new List<int>(solids);
             rest.AddRange(stripes);
             for (int i = 0; i < slots.Length; i++)
                 if (slots[i] == 0) slots[i] = TakeRandom(rest);
 
-            var balls = new List<Ball>(15);
+            var balls = new List<Ball>(slots.Length);
             float d = radius * 2f + gap;
             float rowStep = d * Mathf.Sqrt(3f) / 2f;
             int slot = 0;
-            for (int row = 0; row < 5; row++)
+            for (int row = 0; row < rows; row++)
             {
                 for (int j = 0; j <= row; j++)
                 {

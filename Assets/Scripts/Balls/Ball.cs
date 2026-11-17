@@ -11,7 +11,7 @@ namespace RoguelikePool
     /// speed-proportional drag) and snaps to a full stop below <see cref="stopSpeed"/>.
     /// Every active ball is registered in <see cref="All"/>; a pocketed ball plays a short fall
     /// animation, then is deactivated (and so leaves <see cref="All"/>).
-    /// Number 0 is the cue ball, 1-7 solids, 8 the black, 9-15 stripes.
+    /// Number 0 is the cue ball, 1-7 solids, 8 the black, 9-10 stripes.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D), typeof(CircleCollider2D))]
     public class Ball : MonoBehaviour

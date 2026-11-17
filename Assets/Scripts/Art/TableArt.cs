@@ -76,12 +76,12 @@ namespace RoguelikePool
                 foreach (var pocket in pockets)
                 {
                     float d = Vector2.Distance(p, pocket.transform.localPosition);
-                    if (d < pocket.captureRadius) { hole = pocket; holeDist = d; break; }
+                    if (d < pocket.radius) { hole = pocket; holeDist = d; break; }
                 }
 
                 if (hole != null)
                 {
-                    float r = hole.captureRadius;
+                    float r = hole.radius;
                     Vector2 dir = (p - (Vector2)hole.transform.localPosition) / r;
                     float edge = (r - holeDist) * PixelArt.PPU;
                     if (edge < 1f) { c = Outline; }
@@ -111,7 +111,7 @@ namespace RoguelikePool
                     float pocketAo = 0f;
                     foreach (var pocket in pockets)
                     {
-                        float d = Vector2.Distance(p, pocket.transform.localPosition) - pocket.captureRadius;
+                        float d = Vector2.Distance(p, pocket.transform.localPosition) - pocket.radius;
                         pocketAo = Mathf.Max(pocketAo, 1f - Mathf.Clamp01(d / 0.6f));
                     }
                     float cloth = (PixelArt.ValueNoise(x * 0.08f, y * 0.08f, 11) - 0.5f) * 0.05f; // soft cloth variation, no per-pixel noise
@@ -147,7 +147,7 @@ namespace RoguelikePool
                     foreach (var pocket in pockets)
                     {
                         Vector2 d = p - (Vector2)pocket.transform.localPosition;
-                        float ring = (d.magnitude - pocket.captureRadius) * PixelArt.PPU;
+                        float ring = (d.magnitude - pocket.radius) * PixelArt.PPU;
                         if (ring >= 0f && ring < 4f)
                         {
                             if (ring >= 3f) { c = Outline; break; }

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace RoguelikePool
 {
     /// <summary>
-    /// Pixel-art ball sprites (13x13 px, odd so the number sits on a center pixel): clean 3-tone sphere
+    /// Pixel-art ball sprites (21x21 px, odd so the number sits on a center pixel): clean 3-tone sphere
     /// shading with cool hue-shifted shadows, a pure-white specular that catches the bloom, a colored
     /// edge (dark on the shadow side, light rim on the lit side), stripe band, number disc with a 3x5
     /// digit. Plus a soft drop shadow sprite.
@@ -12,7 +12,7 @@ namespace RoguelikePool
     /// </summary>
     public static class BallArt
     {
-        public const int Size = 13;
+        public const int Size = 21;
 
         static readonly Color Ivory = PixelArt.Hex("e6dcc4");
         static readonly Color NumberInk = PixelArt.Hex("1a1020");
@@ -62,7 +62,7 @@ namespace RoguelikePool
             var px = new Color32[Size * Size];
             Color baseColor = number <= 8 ? Colors[number] : Colors[number - 8];
             bool stripe = number >= 9;
-            const float r = Size / 2f;               // 6.5
+            const float r = Size / 2f;               // 10.5
             Vector3 light = new Vector3(-0.5f, 0.6f, 0.62f).normalized;
 
             for (int y = 0; y < Size; y++)
@@ -77,8 +77,8 @@ namespace RoguelikePool
                 float diffuse = Mathf.Max(0f, nx * light.x + ny * light.y + nz * light.z);
 
                 Color surface = baseColor;
-                if (stripe && Mathf.Abs(dy) > 3.2f) surface = Ivory;
-                bool disc = number > 0 && d < 3.3f;
+                if (stripe && Mathf.Abs(dy) > 5.2f) surface = Ivory;
+                bool disc = number > 0 && d < 5.3f;
                 if (disc) surface = Ivory;
 
                 // Clean 3-tone cel shading (no dithering), kept bright so the color reads at a glance.
@@ -91,10 +91,10 @@ namespace RoguelikePool
                     c = nx - ny > -0.35f ? PixelArt.Shade(surface, 0.24f) : PixelArt.Shade(surface, 0.58f);
 
                 // Specular: 2 px pure white (HDR-ish at 1.0 → bloom) + soft neighbor.
-                float sx = dx + 2.2f, sy = dy - 2.2f;
+                float sx = dx + 3.6f, sy = dy - 3.6f;
                 float spec = sx * sx + sy * sy;
-                if (spec < 0.8f) c = Color.white;
-                else if (spec < 2.2f && !disc) c = Color.Lerp(c, Color.white, 0.5f);
+                if (spec < 1.8f) c = Color.white;
+                else if (spec < 5.2f && !disc) c = Color.Lerp(c, Color.white, 0.5f);
 
                 px[y * Size + x] = c;
             }
@@ -109,7 +109,7 @@ namespace RoguelikePool
         public static Sprite Shadow(float diameter)
         {
             if (shadow != null) return shadow;
-            const int S = 15;
+            const int S = 23;
             var px = new Color32[S * S];
             var dark = PixelArt.Hex("040208");
             const float r = S / 2f;
@@ -118,7 +118,7 @@ namespace RoguelikePool
             {
                 float dx = x + 0.5f - r, dy = y + 0.5f - r;
                 float d = Mathf.Sqrt(dx * dx + dy * dy);
-                float a = Mathf.Clamp01((7.3f - d) / 1.8f) * 115f;
+                float a = Mathf.Clamp01((11.3f - d) / 2.7f) * 115f;
                 px[y * S + x] = PixelArt.WithAlpha(dark, (byte)a);
             }
             var tex = PixelArt.NewTexture(S, S, "BallShadow");

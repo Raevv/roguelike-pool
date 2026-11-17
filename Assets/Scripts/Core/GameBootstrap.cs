@@ -3,7 +3,7 @@ using UnityEngine;
 namespace RoguelikePool
 {
     /// <summary>
-    /// Entry point of the Pool scene: builds the table, the cue ball and the 8-ball rack, the shot UI,
+    /// Entry point of the Pool scene: builds the table, the cue ball and the 10-ball rack, the shot UI,
     /// the rules and the cue controller at runtime, plus the pixel-art rendering setup (low-res
     /// camera rig, post-processing, ambient and impact effects).
     /// Physics2D project settings (zero gravity, low bounce threshold, 120 Hz) live in the project.
@@ -38,7 +38,7 @@ namespace RoguelikePool
             AmbientMotes.Create(table);
 
             var cueBall = BallFactory.CreateCue(table.HeadSpot);
-            BallFactory.CreateEightBallRack(table.FootSpot);
+            BallFactory.CreateRack(table.FootSpot);
 
             var preview = new GameObject("TrajectoryPreview").AddComponent<TrajectoryPreview>();
 
