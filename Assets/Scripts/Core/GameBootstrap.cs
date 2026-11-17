@@ -4,7 +4,7 @@ namespace RoguelikePool
 {
     /// <summary>
     /// Entry point of the Pool scene: builds the table, the cue ball and the 10-ball rack, the shot UI,
-    /// the rules and the cue controller at runtime, plus the pixel-art rendering setup (low-res
+    /// the rules, the stage loop and the cue controller at runtime, plus the pixel-art rendering setup (low-res
     /// camera rig, post-processing, ambient and impact effects).
     /// Physics2D project settings (zero gravity, low bounce threshold, 120 Hz) live in the project.
     /// </summary>
@@ -13,6 +13,8 @@ namespace RoguelikePool
         [Tooltip("Part de la largeur d'écran occupée par le panneau de droite.")]
         [Range(0f, 0.4f)] public float uiPanelFraction = 0.2f;
         public Color backgroundColor = new Color(0.02f, 0.02f, 0.035f);
+        [Tooltip("Liste ordonnée des stages de la partie (Assets/Data/StageCatalog).")]
+        public StageCatalog stageCatalog;
 
         void Awake()
         {
@@ -47,6 +49,11 @@ namespace RoguelikePool
 
             var rules = new GameObject("TableRules").AddComponent<TableRules>();
             rules.Init(ui);
+
+            if (stageCatalog != null && stageCatalog.Count > 0 && stageCatalog.stages.TrueForAll(s => s != null))
+                new GameObject("StageManager").AddComponent<StageManager>().Init(stageCatalog, rules);
+            else
+                Debug.LogError("GameBootstrap : StageCatalog manquant, vide ou avec un stage vide : pas de boucle de stages.");
 
             var cue = new GameObject("CueController").AddComponent<CueController>();
             cue.Init(cueBall, ui, preview, table, rules);
