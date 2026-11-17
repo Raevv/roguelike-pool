@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace RoguelikePool
@@ -13,7 +14,8 @@ namespace RoguelikePool
     ///   With <see cref="scratchCostsShot"/> the shot still counts as used.
     /// - Victory: score ≥ target before the shots run out. Defeat: shots exhausted below target.
     ///   Either way shooting is locked until <see cref="NextStage"/> or <see cref="RestartRun"/>.
-    /// Ball reset on a new stage / restart is not done here yet (step 5 of the stage loop).
+    /// - Every stage start (first stage, next stage, restart) puts every ball back where it was when the
+    ///   game started (cue ball on the head spot, the same rack), pocketed balls included.
     /// </summary>
     public class StageManager : MonoBehaviour
     {
@@ -54,11 +56,15 @@ namespace RoguelikePool
         bool shotInProgress;
         int shotPoints;
         float shotTime;
+        readonly List<(Ball ball, Vector2 position)> startLayout = new List<(Ball, Vector2)>();
 
         public void Init(StageCatalog catalog, TableRules tableRules)
         {
             Catalog = catalog;
             rules = tableRules;
+            // The balls were just created by GameBootstrap: remember the starting layout.
+            startLayout.Clear();
+            foreach (var ball in Ball.All) startLayout.Add((ball, ball.Body.position));
             rules.ShotTaken += OnShotTaken;
             rules.ShotCancelled += OnShotCancelled;
             Ball.Pocketed += OnPocketed;
@@ -96,8 +102,16 @@ namespace RoguelikePool
             shotPoints = 0;
             state = State.Playing;
             rules.Locked = false;
+            ResetBalls();
             Debug.Log($"[Stage] Stage {StageNumber}/{StageCount} : {Target} points en {MaxShots} tirs.");
             Refresh();
+        }
+
+        /// <summary>Puts every ball back at its starting position, at rest (pocketed balls come back too).</summary>
+        void ResetBalls()
+        {
+            foreach (var (ball, position) in startLayout)
+                if (ball != null) ball.ResetTo(position);
         }
 
         void OnShotTaken()
