@@ -111,6 +111,14 @@ namespace RoguelikePool
             messageRoutine = StartCoroutine(MessageRoutine(message, duration));
         }
 
+        /// <summary>Hides the message banner right away (if any).</summary>
+        public void HideMessage()
+        {
+            if (messageRoutine != null) StopCoroutine(messageRoutine);
+            messageRoutine = null;
+            banner.gameObject.SetActive(false);
+        }
+
         /// <summary>True if the given screen position is over any UI element of this canvas.</summary>
         public bool IsOverUI(Vector2 screenPosition)
         {

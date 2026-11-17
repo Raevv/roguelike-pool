@@ -55,6 +55,7 @@ namespace RoguelikePool
                 var stages = new GameObject("StageManager").AddComponent<StageManager>();
                 stages.Init(stageCatalog, rules);
                 new GameObject("StageHUD").AddComponent<StageHUD>().Build(ui.TableArea, stages);
+                new GameObject("StageScreens").AddComponent<StageScreens>().Build(ui, stages);
             }
             else
                 Debug.LogError("GameBootstrap : StageCatalog manquant, vide ou avec un stage vide : pas de boucle de stages.");
