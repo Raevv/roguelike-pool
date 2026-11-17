@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa877d4502f560d4bb09a4477d8a716f, type: 3}
+  m_Name: StageCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.StageCatalog
+  stages:
+  - {fileID: 11400000, guid: f23b46793f431014e9bf891958aa63b8, type: 2}
+  - {fileID: 11400000, guid: bb9640f4a2b99cb4fbb43b7e85ee0cb7, type: 2}
+  - {fileID: 11400000, guid: b3fd1a756249d7341a348c6d601325aa, type: 2}
+  - {fileID: 11400000, guid: 6c762482c3cb1d24a8dd026318538204, type: 2}
+  - {fileID: 11400000, guid: 496e66fe48df86547af9baa38b9b4510, type: 2}
