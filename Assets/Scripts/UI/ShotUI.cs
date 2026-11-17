@@ -27,6 +27,9 @@ namespace RoguelikePool
         /// <summary>Fine aim toggle state (touch-friendly replacement for holding Shift).</summary>
         public bool FineAim { get; private set; }
 
+        /// <summary>Screen area left of the panel (over the table), for overlays such as the stage HUD.</summary>
+        public RectTransform TableArea { get; private set; }
+
         const int ShootW = 96, ShootH = 60, FineW = 92, FineH = 48;
 
         PixelCameraRig rig;
@@ -204,6 +207,7 @@ namespace RoguelikePool
             area.anchorMin = Vector2.zero;
             area.anchorMax = new Vector2(1f - panelFraction, 1f);
             area.offsetMin = area.offsetMax = Vector2.zero;
+            TableArea = area;
 
             banner = new GameObject("Banner", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
             banner.transform.SetParent(area, false);

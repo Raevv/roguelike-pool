@@ -5,7 +5,7 @@ namespace RoguelikePool
 {
     /// <summary>
     /// Tiny bitmap fonts drawn straight into pixel buffers: a 5x7 font for the UI (uppercase,
-    /// digits, É, a few symbols) and a 3x5 digit font for the ball numbers.
+    /// digits, É, a few symbols including /) and a 3x5 digit font for the ball numbers.
     /// Buffers are bottom-up (Unity texture layout); positions given here are the glyph's top-left.
     /// </summary>
     public static class PixelFont
@@ -58,6 +58,7 @@ namespace RoguelikePool
             [':'] = new[] { ".....", "..#..", ".....", ".....", ".....", "..#..", "....." },
             ['-'] = new[] { ".....", ".....", ".....", ".###.", ".....", ".....", "....." },
             ['!'] = new[] { "..#..", "..#..", "..#..", "..#..", "..#..", ".....", "..#.." },
+            ['/'] = new[] { "....#", "....#", "...#.", "..#..", ".#...", "#....", "#...." },
             [' '] = new[] { ".....", ".....", ".....", ".....", ".....", ".....", "....." },
         };
 
