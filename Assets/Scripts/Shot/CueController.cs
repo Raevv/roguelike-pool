@@ -18,8 +18,7 @@ namespace RoguelikePool
     public class CueController : MonoBehaviour
     {
         [Header("Tir")]
-        [Tooltip("Vitesse de la blanche à 100 % (u/s, 1 u = 10 cm → 45 = 4,5 m/s).")]
-        public float maxShotSpeed = 45f;
+        // Max Shot Speed lives in BallPhysicsSettings (Assets/Data/BallPhysicsSettings).
         public float strikeDuration = 0.07f;
 
         [Header("Visée")]
@@ -208,7 +207,7 @@ namespace RoguelikePool
             }
             SetCuePose(direction, -tipGap);
 
-            cueBall.Strike(direction * (power * maxShotSpeed));
+            cueBall.Strike(direction * (power * BallPhysicsSettings.Current.maxShotSpeed));
             striking = false;
         }
 

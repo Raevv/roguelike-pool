@@ -133,8 +133,18 @@ namespace RoguelikePool
             Vector2 n = hit.normal;
             float dn = Vector2.Dot(direction, n);
             var objectBall = hit.collider.GetComponent<Ball>();
+            // Object ball: frictionless impact along the line of centers. The cue ball keeps its tangent
+            // component and a normal part k = (m1 - e m2) / (m1 + m2): 0 for equal masses and e = 1 (stun
+            // shot, tangent line), > 0 (follows through a little) when the object ball is lighter.
+            float k = 0f;
+            if (objectBall != null)
+            {
+                float m1 = ball.Body.mass, m2 = objectBall.Body.mass;
+                float e = ball.Material.bounciness * objectBall.Material.bounciness; // Multiply combine
+                k = (m1 - e * m2) / (m1 + m2);
+            }
             Vector2 next = objectBall != null
-                ? direction - dn * n                               // object ball: cue ball follows the tangent line (stun shot)
+                ? direction - (1f - k) * dn * n
                 : direction - (1f + cushionRestitution) * dn * n;  // cushion: damped reflection
 
             // Object ball leaves along the line of centers (opposite of the contact normal).

@@ -42,9 +42,6 @@ namespace RoguelikePool
         [Tooltip("Déviation des rebonds de la blanche vers les poches du milieu (0 = aucune aide). Les coins n'en ont pas.")]
         [Range(0f, 1f)] public float sideCueFunnel = 0f;
 
-        [Header("Physique")]
-        [Range(0f, 1f)] public float cushionBounciness = 0.8f;
-
         /// <summary>Layer of colliders that only colored balls hit (cushions that have a cue-only twin). Unnamed user layer.</summary>
         public const int ObjectOnlyLayer = 7;
 
@@ -75,12 +72,25 @@ namespace RoguelikePool
         {
             CushionMaterial = new PhysicsMaterial2D("Cushion")
             {
-                bounciness = cushionBounciness,
+                bounciness = BallPhysicsSettings.Current.cushionBounciness, // live-updated in ApplySettings
                 friction = 0f,
                 bounceCombine = PhysicsMaterialCombine2D.Multiply,
                 frictionCombine = PhysicsMaterialCombine2D.Multiply
             };
+            BallPhysicsSettings.Changed += ApplySettings;
             Build();
+        }
+
+        void OnDestroy() => BallPhysicsSettings.Changed -= ApplySettings;
+
+        /// <summary>Cushion bounciness comes from BallPhysicsSettings (edited live in the Inspector).</summary>
+        void ApplySettings()
+        {
+            float b = BallPhysicsSettings.Current.cushionBounciness;
+            if (Mathf.Approximately(CushionMaterial.bounciness, b)) return;
+            CushionMaterial.bounciness = b;
+            foreach (var c in GetComponentsInChildren<Collider2D>(true))
+                if (c.sharedMaterial == CushionMaterial) c.sharedMaterial = CushionMaterial;
         }
 
         void Build()

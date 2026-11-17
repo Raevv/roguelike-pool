@@ -15,9 +15,14 @@ namespace RoguelikePool
         public Color backgroundColor = new Color(0.02f, 0.02f, 0.035f);
         [Tooltip("Liste ordonnée des stages de la partie (Assets/Data/StageCatalog).")]
         public StageCatalog stageCatalog;
+        [Tooltip("Réglages physiques des boules : puissance max, masse, frottement et rebond (blanche / couleurs), rebond des bandes (Assets/Data/BallPhysicsSettings).")]
+        public BallPhysicsSettings ballPhysics;
 
         void Awake()
         {
+            if (ballPhysics != null) BallPhysicsSettings.Current = ballPhysics;
+            else Debug.LogWarning("GameBootstrap : BallPhysicsSettings non assigné, valeurs par défaut du code utilisées.");
+
             var table = new GameObject("PoolTable").AddComponent<PoolTable>();
 
             var cam = Camera.main;

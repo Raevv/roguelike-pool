@@ -8,7 +8,8 @@ namespace RoguelikePool
     /// <summary>
     /// A pool ball on a frictionless Rigidbody2D. Cloth friction is applied manually so the ball
     /// decelerates like a real rolling ball (mostly constant deceleration, plus a small
-    /// speed-proportional drag) and snaps to a full stop below <see cref="stopSpeed"/>.
+    /// speed-proportional drag) and snaps to a full stop below <see cref="BallPhysicsSettings.stopSpeed"/>. Mass, friction and
+    /// bounciness come from <see cref="BallPhysicsSettings"/> (cue ball and colored balls separately).
     /// Every active ball is registered in <see cref="All"/>; a pocketed ball plays a short fall
     /// animation, then is deactivated (and so leaves <see cref="All"/>).
     /// Number 0 is the cue ball, 1-7 solids, 8 the black, 9-10 stripes.
@@ -39,17 +40,7 @@ namespace RoguelikePool
             }
         }
 
-        [Header("Friction du tapis (unités/s, 1 unité = 10 cm)")]
-        [Tooltip("Décélération constante de roulement (u/s²).")]
-        public float rollingDeceleration = 2.0f;
-        [Tooltip("Freinage proportionnel à la vitesse (1/s). Raccourcit surtout les tirs puissants.")]
-        public float speedDrag = 0.25f;
-        [Tooltip("En dessous de cette vitesse, la boule s'arrête net.")]
-        public float stopSpeed = 0.08f;
-
-        [Header("Rebonds")]
-        [Range(0f, 1f)] public float bounciness = 0.97f;
-        public float mass = 0.17f;
+        // Mass, friction and bounciness come from BallPhysicsSettings.Current (cue / colored separately).
 
         [Header("Empochage")]
         public float fallDuration = 0.18f;
@@ -61,7 +52,7 @@ namespace RoguelikePool
         public int Number
         {
             get => number;
-            set { number = value; gameObject.layer = value == 0 ? CueLayer : 0; }
+            set { number = value; gameObject.layer = value == 0 ? CueLayer : 0; ApplySettings(); }
         }
         public bool IsCue => Number == 0;
         public bool IsPocketed { get; private set; }
@@ -80,7 +71,7 @@ namespace RoguelikePool
             baseScale = transform.localScale;
             Material = new PhysicsMaterial2D(name + "_Material")
             {
-                bounciness = bounciness,
+                bounciness = BallPhysicsSettings.Current.For(this).bounciness,
                 friction = 0f,
                 bounceCombine = PhysicsMaterialCombine2D.Multiply,
                 frictionCombine = PhysicsMaterialCombine2D.Multiply
@@ -93,7 +84,7 @@ namespace RoguelikePool
             Body = GetComponent<Rigidbody2D>();
             Body.bodyType = RigidbodyType2D.Dynamic;
             Body.gravityScale = 0f;
-            Body.mass = mass;
+            Body.mass = BallPhysicsSettings.Current.For(this).mass;
             Body.linearDamping = 0f; // friction handled in FixedUpdate
             Body.angularDamping = 0f;
             Body.freezeRotation = true;
@@ -102,8 +93,31 @@ namespace RoguelikePool
             Body.sharedMaterial = Material;
         }
 
-        void OnEnable() => All.Add(this);
-        void OnDisable() => All.Remove(this);
+        void OnEnable()
+        {
+            All.Add(this);
+            BallPhysicsSettings.Changed += ApplySettings;
+            ApplySettings();
+        }
+
+        void OnDisable()
+        {
+            All.Remove(this);
+            BallPhysicsSettings.Changed -= ApplySettings;
+        }
+
+        /// <summary>Copies mass and bounciness from the settings (cue or colored) to the body and material.</summary>
+        void ApplySettings()
+        {
+            if (Body == null) return; // before Awake
+            var p = BallPhysicsSettings.Current.For(this);
+            Body.mass = p.mass;
+            if (!Mathf.Approximately(Material.bounciness, p.bounciness))
+            {
+                Material.bounciness = p.bounciness;
+                Collider.sharedMaterial = Material; // re-assign so the change reaches the physics shape
+            }
+        }
 
         void FixedUpdate()
         {
@@ -112,8 +126,10 @@ namespace RoguelikePool
             float speed = v.magnitude;
             if (speed <= 0f) return;
 
-            float newSpeed = speed - (rollingDeceleration + speedDrag * speed) * Time.fixedDeltaTime;
-            if (newSpeed <= stopSpeed)
+            var settings = BallPhysicsSettings.Current;
+            var p = settings.For(this);
+            float newSpeed = speed - (p.rollingDeceleration + p.linearDrag * speed) * Time.fixedDeltaTime;
+            if (newSpeed <= settings.stopSpeed)
             {
                 Body.linearVelocity = Vector2.zero;
                 Body.angularVelocity = 0f;
