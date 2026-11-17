@@ -43,6 +43,7 @@ namespace RoguelikePool
 
             filter = ContactFilter2D.noFilter;
             filter.useTriggers = false;
+            filter.SetLayerMask(~(1 << PoolTable.ObjectOnlyLayer)); // the preview is for the cue ball: skip colored-only colliders
             Hide();
         }
 

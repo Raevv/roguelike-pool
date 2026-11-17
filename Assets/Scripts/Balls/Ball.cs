@@ -54,7 +54,15 @@ namespace RoguelikePool
         [Header("Empochage")]
         public float fallDuration = 0.18f;
 
-        public int Number { get; set; }
+        /// <summary>Physics layer of the cue ball (unnamed user layer). Cue-only jaw guards exclude every other layer.</summary>
+        public const int CueLayer = 6;
+
+        int number;
+        public int Number
+        {
+            get => number;
+            set { number = value; gameObject.layer = value == 0 ? CueLayer : 0; }
+        }
         public bool IsCue => Number == 0;
         public bool IsPocketed { get; private set; }
 
@@ -112,6 +120,14 @@ namespace RoguelikePool
                 return;
             }
             Body.linearVelocity = v * (newSpeed / speed);
+        }
+
+        void OnCollisionEnter2D(Collision2D collision)
+        {
+            // Arcade: a ball bouncing off a cushion/jaw near a pocket is steered toward the hole
+            // (strongly for colored balls, mildly for the cue ball and only at the side pockets).
+            if (IsPocketed || collision.rigidbody != null || collision.contactCount == 0) return;
+            Pocket.FunnelBounce(this, collision.GetContact(0).point);
         }
 
         public void Strike(Vector2 velocity)

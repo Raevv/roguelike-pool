@@ -32,8 +32,21 @@ namespace RoguelikePool
         [Tooltip("Décalage du centre des poches de coin vers l'extérieur (en diagonale).")]
         public float cornerPocketOffset = 0.1f;
 
+        [Header("Mâchoires fantômes (blanche uniquement, invisibles)")]
+        [Tooltip("Prolongement des bandes vers les poches de coin, le long de la bande, qui ne bloque que la blanche. Rétrécit l'ouverture pour elle d'environ valeur × 1,41 de chaque côté.")]
+        public float cueGuardCorner = 0.35f;
+        [Tooltip("Biseau du bout des bandes côté poches du milieu, pour la blanche uniquement : la pointe de mâchoire recule de cette distance le long de la bande, ce qui ouvre l'entrée aux tirs en angle. 0 = mâchoire droite comme pour les couleurs.")]
+        public float sideCueBevel = 0.5f;
+        [Tooltip("Rayon de capture de la blanche pour les poches du milieu, en fraction du rayon de capture des couleurs (les coins utilisent la valeur par défaut de Pocket).")]
+        [Range(0.1f, 1f)] public float sideCueCaptureScale = 0.7f;
+        [Tooltip("Déviation des rebonds de la blanche vers les poches du milieu (0 = aucune aide). Les coins n'en ont pas.")]
+        [Range(0f, 1f)] public float sideCueFunnel = 0f;
+
         [Header("Physique")]
         [Range(0f, 1f)] public float cushionBounciness = 0.8f;
+
+        /// <summary>Layer of colliders that only colored balls hit (cushions that have a cue-only twin). Unnamed user layer.</summary>
+        public const int ObjectOnlyLayer = 7;
 
         public PhysicsMaterial2D CushionMaterial { get; private set; }
         public IReadOnlyList<Pocket> Pockets => pockets;
@@ -81,20 +94,41 @@ namespace RoguelikePool
             for (int sx = -1; sx <= 1; sx += 2)
             for (int sy = -1; sy <= 1; sy += 2)
                 CreatePocket("CornerPocket", new Vector2(sx * (hw + co), sy * (hh + co)), cornerPocketRadius);
-            CreatePocket("SidePocketLeft", new Vector2(-(hw + cw * 0.9f), 0f), sidePocketRadius);
-            CreatePocket("SidePocketRight", new Vector2(hw + cw * 0.9f, 0f), sidePocketRadius);
+            foreach (var side in new[] {
+                CreatePocket("SidePocketLeft", new Vector2(-(hw + cw * 0.9f), 0f), sidePocketRadius),
+                CreatePocket("SidePocketRight", new Vector2(hw + cw * 0.9f, 0f), sidePocketRadius) })
+            {
+                side.cueCaptureScale = sideCueCaptureScale;
+                side.cueFunnelStrength = sideCueFunnel;
+            }
+
+            // Cue-only colliders (invisible): corner jaw extensions and beveled side jaws.
+            var guards = new GameObject("CueGuards").transform;
+            guards.SetParent(transform, false);
 
             // Cushions (nose points first, then back points).
             var cushions = new GameObject("Cushions").transform;
             cushions.SetParent(transform, false);
+            float bevel = Mathf.Clamp(sideCueBevel, 0f, hh - m - s - 0.1f);
             for (int sx = -1; sx <= 1; sx += 2)
             {
                 // Long rails, upper and lower segments (between corner and side pocket).
                 for (int sy = -1; sy <= 1; sy += 2)
                 {
-                    AddCushion(cushions, Mirror(sx, sy,
+                    var cushion = AddCushion(cushions, Mirror(sx, sy,
                         new Vector2(hw, s), new Vector2(hw, hh - m),
                         new Vector2(hw + cw, hh - m + cw), new Vector2(hw + cw, s)));
+                    if (bevel > 0f)
+                    {
+                        // The drawn cushion stays square for colored balls; the cue ball gets a twin whose
+                        // side-pocket end is beveled, so angled cue shots are not stopped by the jaw tip.
+                        // Twins instead of an add-on piece: each ball sees one continuous polygon, no seam.
+                        cushion.gameObject.layer = ObjectOnlyLayer;
+                        cushion.excludeLayers = 1 << Ball.CueLayer;
+                        AddCueGuard(guards, "CueJawSide", Mirror(sx, sy,
+                            new Vector2(hw, s + bevel), new Vector2(hw, hh - m),
+                            new Vector2(hw + cw, hh - m + cw), new Vector2(hw + cw, s)));
+                    }
                 }
             }
             for (int sy = -1; sy <= 1; sy += 2)
@@ -103,6 +137,24 @@ namespace RoguelikePool
                 AddCushion(cushions, Mirror(1, sy,
                     new Vector2(-hw + m, hh), new Vector2(hw - m, hh),
                     new Vector2(hw - m + cw, hh + cw), new Vector2(-hw + m - cw, hh + cw)));
+            }
+
+            // Cue-only corner guards: invisible extensions of each cushion end toward the corner pocket, so
+            // the mouth is narrower for the cue ball only (colored balls pass through them).
+            float gc = Mathf.Clamp(cueGuardCorner, 0f, m - 0.05f);
+            for (int sx = -1; sx <= 1; sx += 2)
+            for (int sy = -1; sy <= 1; sy += 2)
+            {
+                if (gc > 0f)
+                {
+                    // Corner: long-rail end and short-rail end, each shifted along its 45° jaw.
+                    AddCueGuard(guards, "CueGuardCorner", Mirror(sx, sy,
+                        new Vector2(hw, hh - m), new Vector2(hw, hh - m + gc),
+                        new Vector2(hw + cw, hh - m + gc + cw), new Vector2(hw + cw, hh - m + cw)));
+                    AddCueGuard(guards, "CueGuardCorner", Mirror(sx, sy,
+                        new Vector2(hw - m, hh), new Vector2(hw - m + gc, hh),
+                        new Vector2(hw - m + gc + cw, hh + cw), new Vector2(hw - m + cw, hh + cw)));
+                }
             }
 
             // Safety walls at the outer edge of the rails.
@@ -125,7 +177,7 @@ namespace RoguelikePool
             return result;
         }
 
-        void AddCushion(Transform parent, Vector2[] quad)
+        PolygonCollider2D AddCushion(Transform parent, Vector2[] quad)
         {
             var go = new GameObject("Cushion");
             go.transform.SetParent(parent, false);
@@ -133,6 +185,17 @@ namespace RoguelikePool
             poly.points = quad;
             poly.sharedMaterial = CushionMaterial;
             cushionQuads.Add(quad);
+            return poly;
+        }
+
+        void AddCueGuard(Transform parent, string guardName, Vector2[] quad)
+        {
+            var go = new GameObject(guardName);
+            go.transform.SetParent(parent, false);
+            var poly = go.AddComponent<PolygonCollider2D>();
+            poly.points = quad;
+            poly.sharedMaterial = CushionMaterial;
+            poly.excludeLayers = ~(1 << Ball.CueLayer); // only the cue ball collides with it
         }
 
         void AddWall(GameObject host, Vector2 center, Vector2 size)
@@ -143,7 +206,7 @@ namespace RoguelikePool
             box.sharedMaterial = CushionMaterial;
         }
 
-        void CreatePocket(string pocketName, Vector2 pos, float radius)
+        Pocket CreatePocket(string pocketName, Vector2 pos, float radius)
         {
             var go = new GameObject(pocketName);
             go.transform.SetParent(transform, false);
@@ -151,6 +214,7 @@ namespace RoguelikePool
             var pocket = go.AddComponent<Pocket>();
             pocket.radius = radius;
             pockets.Add(pocket);
+            return pocket;
         }
     }
 }
