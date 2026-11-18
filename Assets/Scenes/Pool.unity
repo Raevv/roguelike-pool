@@ -290,6 +290,7 @@ MonoBehaviour:
   stageCatalog: {fileID: 11400000, guid: c416518694a96714b814280a73c3a941, type: 2}
   ballPhysics: {fileID: 11400000, guid: 997383785f688314cb83bb4c2350e601, type: 2}
   tablePrefab: {fileID: 5398086280292132577, guid: 607101639f5ca59419427c40f241541e, type: 3}
+  cuePrefab: {fileID: 1975489942506755787, guid: e6618bea52042f941a63c14321ea2a2a, type: 3}
 --- !u!4 &1934886592
 Transform:
   m_ObjectHideFlags: 0

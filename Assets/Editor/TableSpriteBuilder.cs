@@ -48,6 +48,7 @@ public static class TableSpriteBuilder
     {
         ImportSprites();
         BuildTablePrefab();
+        BuildCuePrefab();
     }
 
     [MenuItem("Tools/Roguelike Pool/1. Import table and cue sprites")]
@@ -219,10 +220,59 @@ public static class TableSpriteBuilder
         if (bootstrap == null) { Debug.LogError("[TableSprites] No GameBootstrap in Pool.unity"); return; }
         var so = new SerializedObject(bootstrap);
         so.FindProperty("tablePrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<PoolTable>(TablePrefabPath);
+        var cuePrefab = AssetDatabase.LoadAssetAtPath<CueStick>(CuePrefabPath);
+        if (cuePrefab != null) so.FindProperty("cuePrefab").objectReferenceValue = cuePrefab;
         so.ApplyModifiedProperties();
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
         UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
         Debug.Log("[TableSprites] GameBootstrap.tablePrefab assigned in Pool.unity.");
+    }
+
+    // ---------------------------------------------------------------- Cue
+
+    public const string CuePrefabPath = PrefabFolder + "/Cue.prefab";
+    /// <summary>Cue ball radius + CueController.tipGap: resting tip distance, only for the prefab's default pose.</summary>
+    const float CueRestDistance = 0.446875f + 0.15f;
+
+    /// <summary>
+    /// Cue prefab: CueRoot (CueStick, sits on the cue ball and turns with the aim) → Stick (sprite, pivot on
+    /// the tip, rotated -90° so the tip points along +X) → Shadow (same sprite, fixed world offset).
+    /// </summary>
+    [MenuItem("Tools/Roguelike Pool/6. Build Cue prefab")]
+    public static void BuildCuePrefab()
+    {
+        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(CuePng);
+        if (sprite == null) { Debug.LogError($"[TableSprites] {CuePng} is not imported as a Sprite: run step 1."); return; }
+
+        var root = new GameObject("CueRoot");
+        try
+        {
+            var cue = root.AddComponent<CueStick>();
+            var stick = new GameObject("Stick");
+            stick.transform.SetParent(root.transform, false);
+            var body = stick.AddComponent<SpriteRenderer>();
+            body.sprite = sprite;
+            body.sortingOrder = 20; // above the balls (10) and the aim line
+
+            var shadow = new GameObject("Shadow");
+            shadow.transform.SetParent(stick.transform, false);
+            var shadowRenderer = shadow.AddComponent<SpriteRenderer>();
+            shadowRenderer.sprite = sprite;
+            shadowRenderer.color = new Color(0.01f, 0.005f, 0.03f, 0.5f);
+            shadowRenderer.sortingOrder = 19;
+            shadow.AddComponent<WorldOffset>().offset = new Vector2(3f, -4f) / 24f; // 3, -4 px of the 24 px/unit render
+
+            cue.stick = stick.transform;
+            cue.Pose(Vector2.zero, Vector2.right, CueRestDistance); // default pose: tip just behind a ball at the origin
+
+            if (!AssetDatabase.IsValidFolder(PrefabFolder)) AssetDatabase.CreateFolder("Assets", "Prefabs");
+            PrefabUtility.SaveAsPrefabAsset(root, CuePrefabPath, out bool ok);
+            Debug.Log(ok ? $"[TableSprites] {CuePrefabPath} saved." : $"[TableSprites] Failed to save {CuePrefabPath}");
+        }
+        finally
+        {
+            Object.DestroyImmediate(root);
+        }
     }
 
     // ---------------------------------------------------------------- Pocket detection

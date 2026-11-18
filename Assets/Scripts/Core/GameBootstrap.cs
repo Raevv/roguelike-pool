@@ -19,6 +19,8 @@ namespace RoguelikePool
         public BallPhysicsSettings ballPhysics;
         [Tooltip("Prefab de la table (Assets/Prefabs/PoolTable), instancié si la scène ne contient pas déjà une PoolTable.")]
         public PoolTable tablePrefab;
+        [Tooltip("Prefab de la queue (Assets/Prefabs/Cue), instancié si la scène ne contient pas déjà une queue.")]
+        public CueStick cuePrefab;
 
         void Awake()
         {
@@ -78,8 +80,21 @@ namespace RoguelikePool
             else
                 Debug.LogError("GameBootstrap : StageCatalog manquant, vide ou avec un stage vide : pas de boucle de stages.");
 
+            // The cue placed in the scene, otherwise an instance of the prefab.
+            var cueStick = FindAnyObjectByType<CueStick>(FindObjectsInactive.Include);
+            if (cueStick == null)
+            {
+                if (cuePrefab == null)
+                {
+                    Debug.LogError("GameBootstrap : aucune queue (CueStick) dans la scène et Cue Prefab non assigné.");
+                    return;
+                }
+                cueStick = Instantiate(cuePrefab);
+                cueStick.name = cuePrefab.name;
+            }
+
             var cue = new GameObject("CueController").AddComponent<CueController>();
-            cue.Init(cueBall, ui, preview, table, rules);
+            cue.Init(cueBall, ui, preview, table, rules, cueStick);
         }
     }
 }

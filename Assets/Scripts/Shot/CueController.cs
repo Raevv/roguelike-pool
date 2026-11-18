@@ -44,7 +44,7 @@ namespace RoguelikePool
         PoolTable table;
         TableRules rules;
         Camera cam;
-        Transform cue;
+        CueStick cue;
 
         float aimAngle;          // radians, displayed/shot direction (eases toward targetAngle)
         float targetAngle;       // radians, direction set by the input
@@ -60,7 +60,7 @@ namespace RoguelikePool
         bool FineAim => ui.FineAim || (Keyboard.current != null && Keyboard.current.shiftKey.isPressed);
         float CushionRestitution => cueBall.Material.bounciness * table.CushionMaterial.bounciness;
 
-        public void Init(Ball cueBall, ShotUI ui, TrajectoryPreview preview, PoolTable table, TableRules rules)
+        public void Init(Ball cueBall, ShotUI ui, TrajectoryPreview preview, PoolTable table, TableRules rules, CueStick cue)
         {
             this.cueBall = cueBall;
             this.ui = ui;
@@ -70,7 +70,8 @@ namespace RoguelikePool
             cam = Camera.main;
             aimAngle = targetAngle = Mathf.PI / 2f; // toward the rack (up)
             ui.ShootClicked += Shoot;
-            BuildCue();
+            this.cue = cue;
+            cue.gameObject.SetActive(false);
         }
 
         void OnDestroy()
@@ -214,18 +215,7 @@ namespace RoguelikePool
         /// <summary>Places the cue tip behind the ball; pull is the extra distance from the resting gap.</summary>
         void SetCuePose(Vector2 direction, float pull)
         {
-            Vector2 tip = cueBall.Body.position - direction * (cueBall.Radius + tipGap + pull);
-            cue.position = tip;
-            cue.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
-        }
-
-        void BuildCue()
-        {
-            // Root sits at the tip; the cue extends along local -X. Total length ≈ 1.47 m.
-            cue = new GameObject("Cue").transform;
-            cue.SetParent(transform, false);
-            CueArt.Build(cue);
-            cue.gameObject.SetActive(false);
+            cue.Pose(cueBall.Body.position, direction, cueBall.Radius + tipGap + pull);
         }
     }
 }
