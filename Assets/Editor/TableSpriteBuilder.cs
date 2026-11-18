@@ -275,6 +275,60 @@ public static class TableSpriteBuilder
         }
     }
 
+    // ---------------------------------------------------------------- Scene
+
+    /// <summary>Margin around the table when framing the camera (same as PixelCameraRig.margin).</summary>
+    const float CameraMargin = 0.5f;
+
+    /// <summary>
+    /// Puts one instance of each prefab in Pool.unity (if not there yet), poses the cue behind the cue ball
+    /// spawn, frames the orthographic camera on the table with a margin and saves the scene.
+    /// At runtime PixelCameraRig still re-frames the camera for the actual screen and the right panel.
+    /// </summary>
+    [MenuItem("Tools/Roguelike Pool/7. Place table and cue in the Pool scene")]
+    public static void PlaceInScene()
+    {
+        const string scenePath = "Assets/Scenes/Pool.unity";
+        var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+        if (scene.path != scenePath) scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath);
+
+        var table = Object.FindAnyObjectByType<PoolTable>(FindObjectsInactive.Include);
+        if (table == null)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<PoolTable>(TablePrefabPath);
+            table = (PoolTable)PrefabUtility.InstantiatePrefab(prefab, scene);
+            table.transform.position = Vector3.zero;
+        }
+
+        var cue = Object.FindAnyObjectByType<CueStick>(FindObjectsInactive.Include);
+        if (cue == null)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<CueStick>(CuePrefabPath);
+            cue = (CueStick)PrefabUtility.InstantiatePrefab(prefab, scene);
+            cue.name = "CueRoot";
+        }
+        cue.Pose(table.HeadSpot, Vector2.up, CueRestDistance); // edit-mode preview: aiming at the rack
+        PrefabUtility.RecordPrefabInstancePropertyModifications(cue.transform);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(cue.stick);
+
+        var cam = Camera.main;
+        if (cam != null)
+        {
+            Rect b = table.OuterBounds;
+            Vector2 center = table.transform.TransformPoint(b.center);
+            const float referenceAspect = 540f / 960f; // portrait reference resolution
+            cam.orthographic = true;
+            cam.orthographicSize = Mathf.Max(b.height / 2f + CameraMargin, (b.width / 2f + CameraMargin) / referenceAspect);
+            cam.transform.position = new Vector3(center.x, center.y, -10f);
+            EditorUtility.SetDirty(cam);
+            EditorUtility.SetDirty(cam.transform);
+        }
+
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
+        UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+        Debug.Log($"[TableSprites] Pool.unity: {table.name} and {cue.name} placed, camera framed.");
+    }
+
     // ---------------------------------------------------------------- Pocket detection
 
     /// <summary>Rough pocket centers in the PNG (px, top-left origin): only seeds for the detection.</summary>

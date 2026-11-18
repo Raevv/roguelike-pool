@@ -8,6 +8,7 @@ namespace RoguelikePool
     /// camera rig, post-processing, ambient and impact effects).
     /// Physics2D project settings (zero gravity, low bounce threshold, 120 Hz) live in the project.
     /// </summary>
+    [DefaultExecutionOrder(-1000)] // before the table and cue placed in the scene, so BallPhysicsSettings.Current is set first
     public class GameBootstrap : MonoBehaviour
     {
         [Tooltip("Part de la largeur d'écran occupée par le panneau de droite.")]
