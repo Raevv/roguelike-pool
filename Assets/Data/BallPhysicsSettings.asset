@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.BallPhysicsSettings
   maxShotSpeed: 80
   cueBall:
-    mass: 0.35
+    mass: 0.15
     rollingDeceleration: 15
     linearDrag: 0.1
     bounciness: 1
   coloredBalls:
-    mass: 0.15
+    mass: 0.1
     rollingDeceleration: 10
     linearDrag: 0.12
     bounciness: 1
