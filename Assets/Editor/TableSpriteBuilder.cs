@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using RoguelikePool;
 using UnityEditor;
 using UnityEngine;
@@ -120,15 +121,11 @@ public static class TableSpriteBuilder
             AddCushion(cushions, "Cushion_Top", material, Horizontal(FeltTop, 266f, 946f, -1f));
             AddCushion(cushions, "Cushion_Bottom", material, Horizontal(FeltBottom, 263f, 947f, 1f));
 
-            // Pockets: approximate centers/radii read on the PNG (refined by detection in step 2).
+            // Pockets: centers and radii detected in the PNG (dark discs).
             var pockets = new GameObject("Pockets").transform;
             pockets.SetParent(root.transform, false);
-            AddPocket(pockets, "Pocket_TL", Px(166f, 141f), 80f);
-            AddPocket(pockets, "Pocket_TR", Px(1040f, 141f), 80f);
-            AddPocket(pockets, "Pocket_ML", Px(146f, 881f), 68f);
-            AddPocket(pockets, "Pocket_MR", Px(1060f, 881f), 68f);
-            AddPocket(pockets, "Pocket_BL", Px(166f, 1595f), 80f);
-            AddPocket(pockets, "Pocket_BR", Px(1040f, 1595f), 80f);
+            foreach (var guess in PocketGuesses) AddPocket(pockets, guess.name, Vector2.zero, 1f);
+            PlacePockets(pockets);
 
             // Landmarks: same spots as the old table (quarter of the play length from the center).
             float quarter = (FeltBottom - FeltTop) / PixelsPerUnit / 4f;
@@ -146,6 +143,156 @@ public static class TableSpriteBuilder
             Object.DestroyImmediate(root);
         }
     }
+
+    // ---------------------------------------------------------------- Pocket detection
+
+    /// <summary>Rough pocket centers in the PNG (px, top-left origin): only seeds for the detection.</summary>
+    static readonly (string name, Vector2 seed)[] PocketGuesses =
+    {
+        ("Pocket_TL", new Vector2(166f, 141f)), ("Pocket_TR", new Vector2(1040f, 141f)),
+        ("Pocket_ML", new Vector2(146f, 881f)), ("Pocket_MR", new Vector2(1060f, 881f)),
+        ("Pocket_BL", new Vector2(166f, 1595f)), ("Pocket_BR", new Vector2(1040f, 1595f)),
+    };
+
+    /// <summary>Cue capture fraction for the side pockets (same as the old PoolTable.sideCueCaptureScale).</summary>
+    const float SideCueCaptureScale = 0.7f;
+
+    /// <summary>
+    /// Moves only the pocket children of the existing prefab to the detected positions/radii (cushions and
+    /// any other hand edits are kept). Pockets moved by hand are overwritten.
+    /// </summary>
+    [MenuItem("Tools/Roguelike Pool/3. Detect pockets in the PNG and place them in the prefab")]
+    public static void DetectAndPlacePockets()
+    {
+        var root = PrefabUtility.LoadPrefabContents(TablePrefabPath);
+        try
+        {
+            var pockets = root.transform.Find("Pockets");
+            if (pockets == null) { Debug.LogError("[TableSprites] The prefab has no Pockets child: run step 2."); return; }
+            PlacePockets(pockets);
+            PrefabUtility.SaveAsPrefabAsset(root, TablePrefabPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    static void PlacePockets(Transform pocketsParent)
+    {
+        var image = LoadPixels(TablePng, out int w, out int h);
+        var log = new System.Text.StringBuilder("[TableSprites] Pockets detected (px: center, radius → local units):\n");
+        foreach (var (name, seed) in PocketGuesses)
+        {
+            var child = pocketsParent.Find(name);
+            if (child == null) { Debug.LogError($"[TableSprites] Missing {name}"); continue; }
+            if (!DetectDisc(image, w, h, seed, out Vector2 center, out float radiusPx))
+            {
+                Debug.LogError($"[TableSprites] {name}: no dark disc found near {seed}");
+                continue;
+            }
+            Vector2 local = Px(center.x, center.y);
+            float radius = radiusPx / PixelsPerUnit;
+            child.localPosition = local;
+            child.GetComponent<CircleCollider2D>().radius = radius;
+            var pocket = child.GetComponent<Pocket>();
+            pocket.radius = radius;
+            if (name.EndsWith("ML") || name.EndsWith("MR")) pocket.cueCaptureScale = SideCueCaptureScale;
+            log.AppendLine($"  {name}: ({center.x:0.0}, {center.y:0.0}) r {radiusPx:0.0} px → ({local.x:0.000}, {local.y:0.000}) r {radius:0.000}");
+        }
+        Debug.Log(log.ToString());
+    }
+
+    /// <summary>Reads the PNG straight from disk (the imported texture is not readable). Row 0 = top.</summary>
+    static Color32[] LoadPixels(string path, out int w, out int h)
+    {
+        var tex = new Texture2D(2, 2);
+        tex.LoadImage(System.IO.File.ReadAllBytes(path));
+        w = tex.width; h = tex.height;
+        var bottomUp = tex.GetPixels32();
+        Object.DestroyImmediate(tex);
+        var topDown = new Color32[bottomUp.Length];
+        for (int y = 0; y < h; y++) System.Array.Copy(bottomUp, (h - 1 - y) * w, topDown, y * w, w);
+        return topDown;
+    }
+
+    /// <summary>Hole interior: opaque and very dark (felt starts at G ≈ 60, the brass rim at R ≈ 60).</summary>
+    static bool IsHole(Color32 c) => c.a > 128 && c.g < 25 && c.r < 55 && c.b < 35;
+
+    /// <summary>
+    /// Casts 360 rays from the seed through the dark hole pixels; each ray stops at the first non-hole pixel.
+    /// A least-squares circle is fitted to the ray ends, rays far from the median radius are rejected (thin
+    /// dark outlines along the cushions can leak), and the fit is repeated from the new center.
+    /// </summary>
+    static bool DetectDisc(Color32[] img, int w, int h, Vector2 seed, out Vector2 center, out float radius)
+    {
+        center = seed; radius = 0f;
+        const int rays = 360;
+        var ends = new List<Vector2>(rays);
+        var dists = new List<float>(rays);
+        for (int pass = 0; pass < 4; pass++)
+        {
+            ends.Clear(); dists.Clear();
+            for (int i = 0; i < rays; i++)
+            {
+                float a = i * Mathf.PI * 2f / rays;
+                var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                float d = 0f;
+                while (d < 200f)
+                {
+                    var p = center + dir * (d + 0.5f);
+                    int x = Mathf.RoundToInt(p.x), y = Mathf.RoundToInt(p.y);
+                    if (x < 0 || y < 0 || x >= w || y >= h || !IsHole(img[y * w + x])) break;
+                    d += 0.5f;
+                }
+                ends.Add(center + dir * d);
+                dists.Add(d);
+            }
+            var sorted = new List<float>(dists);
+            sorted.Sort();
+            float median = sorted[rays / 2];
+            if (median < 10f) return false;
+
+            // Kasa circle fit on the inlier ray ends.
+            double sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, sxz = 0, syz = 0, sz = 0; int n = 0;
+            for (int i = 0; i < rays; i++)
+            {
+                if (Mathf.Abs(dists[i] - median) > median * 0.12f) continue;
+                double x = ends[i].x - center.x, y = ends[i].y - center.y, z = x * x + y * y;
+                sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; sxz += x * z; syz += y * z; sz += z; n++;
+            }
+            if (n < rays / 3) return false;
+            // Solve [sxx sxy sx; sxy syy sy; sx sy n] [A B C] = [-sxz -syz -sz]; center = (-A/2, -B/2).
+            var m = new double[3, 4] { { sxx, sxy, sx, -sxz }, { sxy, syy, sy, -syz }, { sx, sy, n, -sz } };
+            if (!Solve3(m, out double A, out double B, out double C)) return false;
+            double cx = -A / 2, cy = -B / 2;
+            radius = (float)System.Math.Sqrt(cx * cx + cy * cy - C);
+            center += new Vector2((float)cx, (float)cy);
+        }
+        return radius > 10f;
+    }
+
+    static bool Solve3(double[,] m, out double a, out double b, out double c)
+    {
+        a = b = c = 0;
+        for (int col = 0; col < 3; col++)
+        {
+            int pivot = col;
+            for (int r = col + 1; r < 3; r++) if (System.Math.Abs(m[r, col]) > System.Math.Abs(m[pivot, col])) pivot = r;
+            if (System.Math.Abs(m[pivot, col]) < 1e-9) return false;
+            for (int k = 0; k < 4; k++) (m[col, k], m[pivot, k]) = (m[pivot, k], m[col, k]);
+            for (int r = 0; r < 3; r++)
+            {
+                if (r == col) continue;
+                double f = m[r, col] / m[col, col];
+                for (int k = col; k < 4; k++) m[r, k] -= f * m[col, k];
+            }
+        }
+        a = m[0, 3] / m[0, 0]; b = m[1, 3] / m[1, 1]; c = m[2, 3] / m[2, 2];
+        return true;
+    }
+
+    // ---------------------------------------------------------------- Shapes
 
     /// <summary>Long-rail cushion along x = noseX between y0 (top end) and y1 (bottom end); outward = -1 left, +1 right.</summary>
     static Vector2[] Vertical(float noseX, float y0, float y1, float outward)
