@@ -664,6 +664,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 907755973203651961}
+  - component: {fileID: 5398086280292132577}
   m_Layer: 0
   m_Name: PoolTable
   m_TagString: Untagged
@@ -691,6 +692,51 @@ Transform:
   - {fileID: 3816053584414180250}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5398086280292132577
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4104825870948185043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a24b99bc9b89aea4c9846f93dfdc99b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.PoolTable
+  visual: {fileID: 4463258493313015281}
+  cushions:
+  - {fileID: 8217100912609587440}
+  - {fileID: 4655911695769941735}
+  - {fileID: 5198424553371848810}
+  - {fileID: 3527806166752976004}
+  - {fileID: 4840835785095241506}
+  - {fileID: 8338471865321351147}
+  pockets:
+  - {fileID: 8505158785808018541}
+  - {fileID: 2956876713975937580}
+  - {fileID: 2881326693665122429}
+  - {fileID: 2708609953952521256}
+  - {fileID: 8524684439191414646}
+  - {fileID: 2635885907817071018}
+  rackPoint: {fileID: 7558618387365379975}
+  cueBallSpawn: {fileID: 3816053584414180250}
+  cushionMaterial: {fileID: 6200000, guid: 6c32488ffc515c340a3d06cd9f84a46c, type: 2}
+  playArea:
+    serializedVersion: 2
+    x: -6.35
+    y: -10.824534
+    width: 12.7
+    height: 21.649069
+  tableBounds:
+    serializedVersion: 2
+    x: -8.31407
+    y: -13.556511
+    width: 16.657673
+    height: 26.167906
+  safetyWallMargin: 1.55
+  cueGuardCorner: 0.35
+  sideCueBevel: 0.5
 --- !u!1 &4318013862207974275
 GameObject:
   m_ObjectHideFlags: 0

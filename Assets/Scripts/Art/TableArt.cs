@@ -22,12 +22,28 @@ namespace RoguelikePool
         static readonly Color32[] Floor = PixelArt.Palette("05060a", "080a11", "0c0f18", "111521", "161c2b", "1d2537");
         static readonly Color32 Outline = PixelArt.Hex("07040b");
 
-        public static void Build(PoolTable table)
+        /// <summary>
+        /// Sprite table: only what surrounds it (floor, lamp spill, drop shadow), under a "Surroundings" child.
+        /// They go on the table's sorting layer with negative orders, so they stay below the table sprite.
+        /// </summary>
+        public static void BuildSurroundings(PoolTable table)
+        {
+            var root = new GameObject("Surroundings").transform;
+            root.SetParent(table.transform, false);
+            BuildFloor(root);
+            BuildLampSpill(root, table.OuterBounds);
+            BuildShadow(root, table.OuterBounds);
+            string layer = table.visual != null ? table.visual.sortingLayerName : "Default";
+            foreach (var sr in root.GetComponentsInChildren<SpriteRenderer>()) sr.sortingLayerName = layer;
+        }
+
+        /// <summary>OLD code-drawn table (deleted in the cleanup step).</summary>
+        public static void BuildLegacy(LegacyPoolTable table)
         {
             var root = table.transform;
             BuildFloor(root);
-            BuildLampSpill(root, table);
-            BuildShadow(root, table);
+            BuildLampSpill(root, table.OuterBounds);
+            BuildShadow(root, table.OuterBounds);
             BuildTable(root, table);
             BuildDiamonds(root, table);
         }
@@ -45,7 +61,7 @@ namespace RoguelikePool
 
         // ---------------------------------------------------------------- Table
 
-        static void BuildTable(Transform root, PoolTable t)
+        static void BuildTable(Transform root, LegacyPoolTable t)
         {
             float hw = t.playWidth / 2f, hh = t.playHeight / 2f, cw = t.cushionWidth;
             Rect outer = t.OuterBounds;
@@ -166,7 +182,7 @@ namespace RoguelikePool
             AddSprite("TableArt", root, PixelArt.ToSprite(tex, px), Vector2.zero, 0);
         }
 
-        static void BuildDiamonds(Transform root, PoolTable t)
+        static void BuildDiamonds(Transform root, LegacyPoolTable t)
         {
             // Small glowing brass studs (HDR material → they catch the bloom).
             var px = new Color32[9];
@@ -201,9 +217,8 @@ namespace RoguelikePool
 
         // ---------------------------------------------------------------- Shadow & floor
 
-        static void BuildShadow(Transform root, PoolTable t)
+        static void BuildShadow(Transform root, Rect outer)
         {
-            Rect outer = t.OuterBounds;
             const int fringe = 10;
             int W = Even(Mathf.CeilToInt(outer.width * PixelArt.PPU) + fringe * 2);
             int H = Even(Mathf.CeilToInt(outer.height * PixelArt.PPU) + fringe * 2);
@@ -219,7 +234,7 @@ namespace RoguelikePool
                 px[y * W + x] = PixelArt.WithAlpha(shadow, (byte)(a * a * 0.8f * 255f)); // smooth falloff
             }
             var tex = PixelArt.NewTexture(W, H, "TableShadow");
-            AddSprite("TableShadow", root, PixelArt.ToSprite(tex, px), new Vector2(10, -14) * PixelArt.Pixel, -10);
+            AddSprite("TableShadow", root, PixelArt.ToSprite(tex, px), outer.center + new Vector2(10, -14) * PixelArt.Pixel, -10);
         }
 
         static void BuildFloor(Transform root)
@@ -253,10 +268,9 @@ namespace RoguelikePool
             sr.size = new Vector2(96, 96);
         }
 
-        static void BuildLampSpill(Transform root, PoolTable t)
+        static void BuildLampSpill(Transform root, Rect outer)
         {
             // Warm light pool on the floor around the table, smooth alpha.
-            Rect outer = t.OuterBounds;
             int W = Even(Mathf.CeilToInt((outer.width + 10f) * PixelArt.PPU));
             int H = Even(Mathf.CeilToInt((outer.height + 10f) * PixelArt.PPU));
             var px = new Color32[W * H];
@@ -271,7 +285,7 @@ namespace RoguelikePool
                 px[y * W + x] = PixelArt.WithAlpha(warm, (byte)(q * 255f));
             }
             var tex = PixelArt.NewTexture(W, H, "LampSpill");
-            AddSprite("LampSpill", root, PixelArt.ToSprite(tex, px), Vector2.zero, -25);
+            AddSprite("LampSpill", root, PixelArt.ToSprite(tex, px), outer.center, -25);
         }
 
         // ---------------------------------------------------------------- Geometry helpers

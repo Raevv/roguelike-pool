@@ -10,7 +10,7 @@ namespace RoguelikePool
         public static ParticleSystem Create(PoolTable table)
         {
             var go = new GameObject("AmbientMotes");
-            go.transform.position = table.transform.position;
+            go.transform.position = table.transform.TransformPoint(table.OuterBounds.center);
             var ps = go.AddComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 

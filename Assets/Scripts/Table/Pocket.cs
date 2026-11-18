@@ -45,6 +45,12 @@ namespace RoguelikePool
         public float CueCaptureRadius => ObjectCaptureRadius * cueCaptureScale;
         public float CaptureRadiusFor(Ball ball) => ball.IsCue ? CueCaptureRadius : ObjectCaptureRadius;
 
+        /// <summary>Keeps the (informative) trigger circle the same size as the drawn hole when Radius is edited.</summary>
+        void OnValidate()
+        {
+            if (TryGetComponent(out CircleCollider2D circle)) circle.radius = radius;
+        }
+
         void OnEnable() => Active.Add(this);
         void OnDisable() => Active.Remove(this);
 

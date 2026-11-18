@@ -8,29 +8,29 @@ public static class SideCueTest
     // Sets the side pockets' cue capture scale, cue funnel and the cue-only side jaw bevel at runtime, then
     // shoots the cue ball at the right side pocket from 9 start points (3 distances from the rail x 3
     // distances along it) and 3 aim points (mouth center just inside the rail line, +-0.35 along the rail). Rows: rail = ball against
-    // the rail, near = 1 unit off it, far = 3 units off it. Pass ball=1 to shoot colored ball 1 instead.
+    // the rail, near = 1 unit off it, far = 3 units off it. Pass colored=1 to shoot colored ball 1 instead.
     // Other balls are parked bottom-left: restart Play Mode afterwards.
+    // With the user-tuned friction (2026-11), use speed 20.
     public static async Task<string> Run(float captureScale, float bevel, float funnel, float speed, int colored)
     {
         var table = Object.FindAnyObjectByType<PoolTable>();
-        float hw = table.playWidth / 2f, hh = table.playHeight / 2f, cw = table.cushionWidth;
-        float s = table.sideMouthHalfWidth, m = table.cornerMouthOffset;
-        foreach (var p in Pocket.Active)
-            if (p.name.StartsWith("SidePocket")) { p.cueCaptureScale = captureScale; p.cueFunnelStrength = funnel; }
-        foreach (var g in table.GetComponentsInChildren<PolygonCollider2D>(true).Where(c => c.name == "CueJawSide"))
-        {
-            float sx = Mathf.Sign(g.points[0].x), sy = Mathf.Sign(g.points[1].y);
-            g.points = new[] { new Vector2(sx * hw, sy * (s + bevel)), new Vector2(sx * hw, sy * (hh - m)),
-                               new Vector2(sx * (hw + cw), sy * (hh - m + cw)), new Vector2(sx * (hw + cw), sy * s) };
-        }
+        var area = table.PlayAreaWorld;
+        float hw = area.xMax;
+        foreach (var p in table.pockets)
+            if (table.IsSidePocket(p)) { p.cueCaptureScale = captureScale; p.cueFunnelStrength = funnel; }
+        table.sideCueBevel = bevel;
+        table.RebuildCueGuards();
+
+        PolygonCollider2D C(string n) => table.cushions.First(c => c.name == n);
+        Vector2 W(PolygonCollider2D c, int i) => c.transform.TransformPoint(c.points[i]);
+        float sideC = (W(C("Cushion_RightTop"), 1).y + W(C("Cushion_RightBottom"), 0).y) / 2f;
 
         var all = Object.FindObjectsByType<Ball>(FindObjectsInactive.Include);
         var ball = colored != 0 ? all.First(b => b.Number == 1) : all.First(b => b.IsCue);
         int k = 0;
         foreach (var b in all)
-            if (b != ball) b.ResetTo(new Vector2(-4.5f + (k % 4) * 0.95f, -10.5f + (k++ / 4) * 0.95f));
+            if (b != ball) b.ResetTo(new Vector2(area.xMin + 1.85f + (k % 4) * 0.95f, area.yMin + 0.9f + (k++ / 4) * 0.95f));
 
-        Vector2 center = table.Pockets.First(p => p.name == "SidePocketRight").transform.position;
         string report = $"{(colored != 0 ? "COLOR" : "CUE")} capture={captureScale} bevel={bevel} funnel={funnel}: ";
         int total = 0;
         foreach (var (label, inset) in new[] { ("rail", 0.46f), ("near", 1.0f), ("far", 3.0f) })
@@ -40,8 +40,8 @@ public static class SideCueTest
             foreach (float along in new[] { 2f, 4f, 6f })
             foreach (float aim in new[] { 0f, 0.35f, -0.35f })
             {
-                Vector2 start = new Vector2(hw - inset, along);
-                Vector2 target = new Vector2(hw - 0.25f, aim); // ball center over the mouth, just inside the rail line
+                Vector2 start = new Vector2(hw - inset, sideC + along);
+                Vector2 target = new Vector2(hw - 0.25f, sideC + aim); // ball center over the mouth, just inside the rail line
                 ball.ResetTo(start);
                 await Task.Delay(30);
                 ball.Strike((target - start).normalized * speed);

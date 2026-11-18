@@ -16,7 +16,7 @@ public static class HighSpeedTest
         var rng = new System.Random(seed);
         var table = Object.FindAnyObjectByType<PoolTable>();
         var rules = Object.FindAnyObjectByType<TableRules>();
-        var walls = table.GetComponentsInChildren<Collider2D>(true).Where(c => c.GetComponent<Ball>() == null).ToArray();
+        var walls = table.GetComponentsInChildren<Collider2D>(true).Where(c => c.GetComponent<Ball>() == null && !c.isTrigger).ToArray(); // pocket circles are triggers
         Rect outer = table.OuterBounds;
         float speed = fraction * BallPhysicsSettings.Current.maxShotSpeed;
 

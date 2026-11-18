@@ -132,6 +132,8 @@ public static class TableSpriteBuilder
             AddPoint(root.transform, "RackPoint", new Vector2(0f, quarter));
             AddPoint(root.transform, "CueBallSpawn", new Vector2(0f, -quarter));
 
+            SetupTableComponent(root);
+
             if (!AssetDatabase.IsValidFolder(PrefabFolder)) AssetDatabase.CreateFolder("Assets", "Prefabs");
             PrefabUtility.SaveAsPrefabAsset(root, TablePrefabPath, out bool ok);
             Debug.Log(ok
@@ -142,6 +144,85 @@ public static class TableSpriteBuilder
         {
             Object.DestroyImmediate(root);
         }
+    }
+
+    // ---------------------------------------------------------------- PoolTable component
+
+    /// <summary>
+    /// Adds (if missing) the PoolTable component to the prefab root and wires its references by child name,
+    /// play area and visible bounds. Nothing is moved: hand edits of cushions, pockets and landmarks are kept.
+    /// </summary>
+    [MenuItem("Tools/Roguelike Pool/4. Set up the PoolTable component on the prefab")]
+    public static void SetupTableComponentOnPrefab()
+    {
+        var root = PrefabUtility.LoadPrefabContents(TablePrefabPath);
+        try
+        {
+            SetupTableComponent(root);
+            PrefabUtility.SaveAsPrefabAsset(root, TablePrefabPath);
+            Debug.Log("[TableSprites] PoolTable component set up on the prefab.");
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    static void SetupTableComponent(GameObject root)
+    {
+        var table = root.GetComponent<PoolTable>();
+        if (table == null) table = root.AddComponent<PoolTable>();
+        table.visual = root.transform.Find("Visual")?.GetComponent<SpriteRenderer>();
+        var cushions = root.transform.Find("Cushions");
+        table.cushions = cushions != null ? cushions.GetComponentsInChildren<PolygonCollider2D>(true) : new PolygonCollider2D[0];
+        var pockets = new List<Pocket>();
+        foreach (var (name, _) in PocketGuesses)
+        {
+            var p = root.transform.Find("Pockets/" + name)?.GetComponent<Pocket>();
+            if (p != null) pockets.Add(p); else Debug.LogError($"[TableSprites] Missing Pockets/{name}");
+        }
+        table.pockets = pockets.ToArray();
+        table.rackPoint = root.transform.Find("RackPoint");
+        table.cueBallSpawn = root.transform.Find("CueBallSpawn");
+        table.cushionMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial2D>(CushionMaterialPath);
+
+        Vector2 min = Px(FeltLeft, FeltBottom), max = Px(FeltRight, FeltTop);
+        table.playArea = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+        table.tableBounds = OpaqueBounds();
+        EditorUtility.SetDirty(table);
+    }
+
+    /// <summary>Bounds of the opaque pixels of the table PNG (frame and legs), in prefab local units.</summary>
+    static Rect OpaqueBounds()
+    {
+        var img = LoadPixels(TablePng, out int w, out int h);
+        int x0 = w, x1 = -1, y0 = h, y1 = -1;
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+        {
+            if (img[y * w + x].a < 128) continue;
+            if (x < x0) x0 = x; if (x > x1) x1 = x;
+            if (y < y0) y0 = y; if (y > y1) y1 = y;
+        }
+        Vector2 min = Px(x0, y1 + 1), max = Px(x1 + 1, y0);
+        return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+    }
+
+    /// <summary>Assigns the prefab to GameBootstrap.tablePrefab in Pool.unity and saves the scene.</summary>
+    [MenuItem("Tools/Roguelike Pool/5. Assign the prefab to GameBootstrap (Pool scene)")]
+    public static void AssignPrefabToBootstrap()
+    {
+        const string scenePath = "Assets/Scenes/Pool.unity";
+        var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+        if (scene.path != scenePath) scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath);
+        var bootstrap = Object.FindAnyObjectByType<GameBootstrap>();
+        if (bootstrap == null) { Debug.LogError("[TableSprites] No GameBootstrap in Pool.unity"); return; }
+        var so = new SerializedObject(bootstrap);
+        so.FindProperty("tablePrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<PoolTable>(TablePrefabPath);
+        so.ApplyModifiedProperties();
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
+        UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+        Debug.Log("[TableSprites] GameBootstrap.tablePrefab assigned in Pool.unity.");
     }
 
     // ---------------------------------------------------------------- Pocket detection

@@ -17,13 +17,26 @@ namespace RoguelikePool
         public StageCatalog stageCatalog;
         [Tooltip("Réglages physiques des boules : puissance max, masse, frottement et rebond (blanche / couleurs), rebond des bandes (Assets/Data/BallPhysicsSettings).")]
         public BallPhysicsSettings ballPhysics;
+        [Tooltip("Prefab de la table (Assets/Prefabs/PoolTable), instancié si la scène ne contient pas déjà une PoolTable.")]
+        public PoolTable tablePrefab;
 
         void Awake()
         {
             if (ballPhysics != null) BallPhysicsSettings.Current = ballPhysics;
             else Debug.LogWarning("GameBootstrap : BallPhysicsSettings non assigné, valeurs par défaut du code utilisées.");
 
-            var table = new GameObject("PoolTable").AddComponent<PoolTable>();
+            // The table placed in the scene, otherwise an instance of the prefab.
+            var table = FindAnyObjectByType<PoolTable>();
+            if (table == null)
+            {
+                if (tablePrefab == null)
+                {
+                    Debug.LogError("GameBootstrap : aucune PoolTable dans la scène et Table Prefab non assigné.");
+                    return;
+                }
+                table = Instantiate(tablePrefab);
+                table.name = tablePrefab.name;
+            }
 
             var cam = Camera.main;
             if (cam == null)
