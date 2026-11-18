@@ -38,7 +38,7 @@ namespace RoguelikePool
         public float funnelRadiusScale = 2.3f;
         [Tooltip("Part du rebond redirigée vers le trou (0 = rebond normal, 1 = droit dans le trou).")]
         [Range(0f, 1f)] public float funnelStrength = 0.6f;
-        [Tooltip("Pareil pour la blanche (0 = aucune aide). Réglé par PoolTable pour les poches du milieu uniquement.")]
+        [Tooltip("Pareil pour la blanche (0 = aucune aide, valeur par défaut des 6 poches).")]
         [Range(0f, 1f)] public float cueFunnelStrength = 0f;
 
         public float ObjectCaptureRadius => radius * objectCaptureScale;

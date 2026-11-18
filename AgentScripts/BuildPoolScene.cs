@@ -28,6 +28,9 @@ public static class BuildPoolScene
         const string path = "Assets/Scenes/Pool.unity";
         EditorSceneManager.SaveScene(scene, path);
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
+        // Sprite table and cue: prefab references on GameBootstrap, instances placed in the scene, camera framed.
+        TableSpriteBuilder.AssignPrefabToBootstrap();
+        TableSpriteBuilder.PlaceInScene();
         AssetDatabase.SaveAssets();
         return "Saved " + path + " | gravity=" + Physics2D.gravity + " bounce=" + Physics2D.bounceThreshold + " dt=" + Time.fixedDeltaTime;
     }

@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6972031186713897218}
   - component: {fileID: 8775430274010535559}
-  - component: {fileID: 7222749167330977637}
+  - component: {fileID: 3258593425141954251}
   m_Layer: 0
   m_Name: Shadow
   m_TagString: Untagged
@@ -93,7 +93,7 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
---- !u!114 &7222749167330977637
+--- !u!114 &3258593425141954251
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -102,7 +102,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1586690537737145604}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 4a682d24fd8b2e24ca0f0c38129af63b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.WorldOffset
   offset: {x: 0.125, y: -0.16666667}
