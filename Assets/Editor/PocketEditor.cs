@@ -73,8 +73,8 @@ namespace RoguelikePool
                 ($"Trou {p.radius:0.00}", Pocket.HoleGizmoColor),
                 ($"Couleurs {p.ObjectCaptureRadius:0.00} (x{p.objectCaptureScale:0.00})", Pocket.ObjectGizmoColor),
                 ($"Blanche {p.CueCaptureRadius:0.00} (x{p.cueCaptureScale:0.00})", Pocket.CueGizmoColor),
-                ($"Aspiration {p.radius * p.assistRadiusScale:0.00}", AssistColor),
-                ($"Rebonds {p.radius * p.funnelRadiusScale:0.00}", FunnelColor),
+                ($"Aspiration {p.radius * p.assistRadiusScale:0.00} (x{p.assistRadiusScale:0.00})", AssistColor),
+                ($"Rebonds {p.radius * p.funnelRadiusScale:0.00} (x{p.funnelRadiusScale:0.00})", FunnelColor),
             };
             const float w = 190f, lh = 16f;
             float x = inward.x < 0f ? gui.x - w : gui.x;          // grow away from the pocket
