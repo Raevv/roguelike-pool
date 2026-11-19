@@ -248,17 +248,7 @@ namespace RoguelikePool
             if (cueBallSpawn != null) DrawCross(transform.InverseTransformPoint(cueBallSpawn.position), 0.4f);
 
             Gizmos.matrix = Matrix4x4.identity;
-            foreach (var p in pockets)
-            {
-                if (p == null) continue;
-                Vector3 c = p.transform.position;
-                Gizmos.color = new Color(1f, 0.85f, 0.2f, 1f);
-                DrawCircle(c, p.radius);                         // drawn hole
-                Gizmos.color = new Color(0.3f, 1f, 0.4f, 0.6f);
-                DrawCircle(c, p.ObjectCaptureRadius);            // colored balls fall in
-                Gizmos.color = new Color(1f, 1f, 1f, 0.8f);
-                DrawCircle(c, p.CueCaptureRadius);               // cue ball falls in
-            }
+            // Pocket zones are drawn by each Pocket (Pocket.OnDrawGizmos) and its editor (PocketEditor).
         }
 
         static void DrawRect(Rect r)
@@ -271,19 +261,6 @@ namespace RoguelikePool
         {
             Gizmos.DrawLine(c + new Vector3(-s, 0f), c + new Vector3(s, 0f));
             Gizmos.DrawLine(c + new Vector3(0f, -s), c + new Vector3(0f, s));
-        }
-
-        static void DrawCircle(Vector3 c, float r)
-        {
-            const int n = 48;
-            Vector3 prev = c + new Vector3(r, 0f);
-            for (int i = 1; i <= n; i++)
-            {
-                float a = i * Mathf.PI * 2f / n;
-                Vector3 next = c + new Vector3(Mathf.Cos(a) * r, Mathf.Sin(a) * r);
-                Gizmos.DrawLine(prev, next);
-                prev = next;
-            }
         }
     }
 }

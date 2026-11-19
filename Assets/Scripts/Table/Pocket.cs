@@ -51,6 +51,34 @@ namespace RoguelikePool
             if (TryGetComponent(out CircleCollider2D circle)) circle.radius = radius;
         }
 
+#if UNITY_EDITOR
+        public static readonly Color HoleGizmoColor = new Color(1f, 0.85f, 0.2f, 1f);
+        public static readonly Color ObjectGizmoColor = new Color(0.3f, 1f, 0.4f, 1f);
+        public static readonly Color CueGizmoColor = new Color(1f, 0.35f, 0.35f, 1f);
+
+        /// <summary>Scene view: filled capture zones (green = colored balls, red = cue ball) and the drawn hole (yellow).</summary>
+        void OnDrawGizmos() => DrawZones(UnityEditor.Selection.Contains(gameObject));
+
+        void DrawZones(bool selected)
+        {
+            Vector3 c = transform.position;
+            float fill = selected ? 0.18f : 0.09f;
+            float line = selected ? 3f : 2f;
+            UnityEditor.Handles.color = Alpha(ObjectGizmoColor, fill);
+            UnityEditor.Handles.DrawSolidDisc(c, Vector3.forward, ObjectCaptureRadius);
+            UnityEditor.Handles.color = Alpha(CueGizmoColor, fill * 1.5f);
+            UnityEditor.Handles.DrawSolidDisc(c, Vector3.forward, CueCaptureRadius);
+            UnityEditor.Handles.color = Alpha(ObjectGizmoColor, 0.9f);
+            UnityEditor.Handles.DrawWireDisc(c, Vector3.forward, ObjectCaptureRadius, line);
+            UnityEditor.Handles.color = Alpha(HoleGizmoColor, 0.9f);
+            UnityEditor.Handles.DrawWireDisc(c, Vector3.forward, radius, line);
+            UnityEditor.Handles.color = Alpha(CueGizmoColor, 0.95f);
+            UnityEditor.Handles.DrawWireDisc(c, Vector3.forward, CueCaptureRadius, line);
+        }
+
+        static Color Alpha(Color c, float a) { c.a = a; return c; }
+#endif
+
         void OnEnable() => Active.Add(this);
         void OnDisable() => Active.Remove(this);
 
