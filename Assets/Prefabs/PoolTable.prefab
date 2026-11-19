@@ -1254,9 +1254,9 @@ MonoBehaviour:
   radius: 1.1394854
   objectCaptureScale: 1.35
   cueCaptureScale: 0.45
-  assistRadiusScale: 2.2
+  assistRadiusScale: 1.5
   assistStrength: 7
-  funnelRadiusScale: 2.3
+  funnelRadiusScale: 1.6
   funnelStrength: 0.6
   cueFunnelStrength: 0
 --- !u!1 &8975597887564536635
