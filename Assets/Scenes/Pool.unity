@@ -167,9 +167,161 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2198436705035882018, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: m_Radius
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 2635885907817071018, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: radius
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 2635885907817071018, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: assistStrength
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2635885907817071018, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: funnelStrength
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2635885907817071018, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: cueCaptureScale
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2635885907817071018, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: assistRadiusScale
+      value: 1.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2635885907817071018, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: cueFunnelStrength
+      value: 0.437
+      objectReference: {fileID: 0}
+    - target: {fileID: 2635885907817071018, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: funnelRadiusScale
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2635885907817071018, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: objectCaptureScale
+      value: 1.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2708609953952521256, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: cueCaptureScale
+      value: 0.555
+      objectReference: {fileID: 0}
+    - target: {fileID: 2881326693665122429, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: cueCaptureScale
+      value: 0.555
+      objectReference: {fileID: 0}
+    - target: {fileID: 2956876713975937580, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: radius
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 2956876713975937580, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: assistStrength
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2956876713975937580, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: funnelStrength
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2956876713975937580, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: cueCaptureScale
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2956876713975937580, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: assistRadiusScale
+      value: 1.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2956876713975937580, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: cueFunnelStrength
+      value: 0.437
+      objectReference: {fileID: 0}
+    - target: {fileID: 2956876713975937580, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: funnelRadiusScale
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2956876713975937580, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: objectCaptureScale
+      value: 1.4
+      objectReference: {fileID: 0}
     - target: {fileID: 4104825870948185043, guid: 607101639f5ca59419427c40f241541e, type: 3}
       propertyPath: m_Name
       value: PoolTable
+      objectReference: {fileID: 0}
+    - target: {fileID: 4651701221495924395, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: m_Radius
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 5034300336361015501, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: m_Radius
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 6643067232949364049, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: m_Radius
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8505158785808018541, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: radius
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8505158785808018541, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: assistStrength
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8505158785808018541, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: funnelStrength
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8505158785808018541, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: cueCaptureScale
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8505158785808018541, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: assistRadiusScale
+      value: 1.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8505158785808018541, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: cueFunnelStrength
+      value: 0.437
+      objectReference: {fileID: 0}
+    - target: {fileID: 8505158785808018541, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: funnelRadiusScale
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8505158785808018541, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: objectCaptureScale
+      value: 1.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 8524684439191414646, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: radius
+      value: 1.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 8524684439191414646, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: assistStrength
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8524684439191414646, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: funnelStrength
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8524684439191414646, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: cueCaptureScale
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8524684439191414646, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: assistRadiusScale
+      value: 1.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8524684439191414646, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: cueFunnelStrength
+      value: 0.437
+      objectReference: {fileID: 0}
+    - target: {fileID: 8524684439191414646, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: funnelRadiusScale
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8524684439191414646, guid: 607101639f5ca59419427c40f241541e, type: 3}
+      propertyPath: objectCaptureScale
+      value: 1.4
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

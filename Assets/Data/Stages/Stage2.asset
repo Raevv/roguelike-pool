@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 87c3f564d662d094aa21c57e73d5ba2b, type: 3}
   m_Name: Stage2
   m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.StageData
-  targetScore: 3
-  maxShots: 5
+  targetScore: 2
+  maxShots: 50
