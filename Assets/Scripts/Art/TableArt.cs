@@ -23,7 +23,7 @@ namespace RoguelikePool
             BuildFloor(root);
             BuildLampSpill(root, table.OuterBounds);
             BuildShadow(root, table.OuterBounds);
-            string layer = table.visual != null ? table.visual.sortingLayerName : "Default";
+            string layer = table.visual != null ? table.visual.sortingLayerName : "Table"; // never above the table sprite
             foreach (var sr in root.GetComponentsInChildren<SpriteRenderer>()) sr.sortingLayerName = layer;
         }
 

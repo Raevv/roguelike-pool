@@ -34,9 +34,9 @@ namespace RoguelikePool
 
         [Header("Limites (repère local de la table)")]
         [Tooltip("Tapis : rectangle limité par le nez des bandes.")]
-        public Rect playArea = new Rect(-6.35f, -10.8244f, 12.7f, 21.6488f);
+        public Rect playArea = new Rect(-6.35f, -10.824534f, 12.7f, 21.649069f);
         [Tooltip("Partie visible du sprite (cadre en bois et pieds), pour la caméra et l'ombre.")]
-        public Rect tableBounds = new Rect(-8.25f, -12.85f, 16.5f, 25.6f);
+        public Rect tableBounds = new Rect(-8.31407f, -13.556511f, 16.657673f, 26.167906f);
         [Tooltip("Les murs de sécurité invisibles sont à cette distance autour du tapis.")]
         public float safetyWallMargin = 1.55f;
 
@@ -82,8 +82,46 @@ namespace RoguelikePool
         /// <summary>Side (middle) pockets are the ones near the table's half line.</summary>
         public bool IsSidePocket(Pocket p) => Mathf.Abs(p.transform.localPosition.y - playArea.center.y) < playArea.height / 4f;
 
+        static readonly string[] PocketNames = { "Pocket_TL", "Pocket_TR", "Pocket_ML", "Pocket_MR", "Pocket_BL", "Pocket_BR" };
+
+        /// <summary>
+        /// Fills the missing references from the children's names (Visual, Cushions/*, Pockets/Pocket_TL..BR,
+        /// RackPoint, CueBallSpawn). Called by Reset (Inspector menu) and in Awake, so a reset component
+        /// never leaves the table without its sprite or pockets.
+        /// </summary>
+        public void AutoWire()
+        {
+            if (visual == null) visual = transform.Find("Visual")?.GetComponent<SpriteRenderer>();
+            if (cushions == null || cushions.Length == 0 || System.Array.Exists(cushions, c => c == null))
+            {
+                var root = transform.Find("Cushions");
+                if (root != null) cushions = root.GetComponentsInChildren<PolygonCollider2D>(true);
+            }
+            if (pockets == null || pockets.Length != PocketNames.Length || System.Array.Exists(pockets, p => p == null))
+            {
+                var list = new List<Pocket>();
+                foreach (var n in PocketNames)
+                {
+                    var p = transform.Find("Pockets/" + n)?.GetComponent<Pocket>();
+                    if (p != null) list.Add(p);
+                }
+                if (list.Count == PocketNames.Length) pockets = list.ToArray();
+                else Debug.LogError($"PoolTable : {list.Count}/6 poches trouvées sous Pockets/ (noms attendus Pocket_TL, TR, ML, MR, BL, BR).", this);
+            }
+            if (rackPoint == null) rackPoint = transform.Find("RackPoint");
+            if (cueBallSpawn == null) cueBallSpawn = transform.Find("CueBallSpawn");
+#if UNITY_EDITOR
+            if (cushionMaterial == null)
+                cushionMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<PhysicsMaterial2D>("Assets/Data/Cushion.physicsMaterial2D");
+#endif
+        }
+
+        void Reset() => AutoWire();
+
         void Awake()
         {
+            AutoWire();
+            if (visual == null) Debug.LogError("PoolTable : pas de SpriteRenderer « Visual », la table ne sera pas visible.", this);
             foreach (var c in GetComponentsInChildren<Collider2D>(true))
                 if (!c.isTrigger) c.sharedMaterial = CushionMaterial;
             BallPhysicsSettings.Changed += ApplySettings;
