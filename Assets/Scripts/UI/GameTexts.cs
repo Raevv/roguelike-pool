@@ -45,6 +45,30 @@ namespace RoguelikePool
         [Tooltip("Bandeau quand la blanche tombe : le tir est annulé.")]
         public string scratchMessage = "Blanche empochée : tir annulé";
 
+        [Header("Formats : {0}, {1}, {2} sont remplacés par les valeurs")]
+        [Tooltip("Sous la jauge. {0} = puissance en %.")]
+        public string powerFormat = "{0}%";
+        [Tooltip("HUD, colonne STAGE. {0} = stage actuel, {1} = nombre de stages.")]
+        public string hudStageFormat = "{0}/{1}";
+        [Tooltip("HUD, colonne SCORE. {0} = score, {1} = objectif.")]
+        public string hudScoreFormat = "{0}/{1}";
+        [Tooltip("HUD, colonne TIRS. {0} = tirs restants, {1} = tirs max.")]
+        public string hudShotsFormat = "{0}/{1}";
+        [Tooltip("Victoire, ligne 1. {0} = n° du stage.")]
+        public string stageWonLine1 = "STAGE {0} RÉUSSI";
+        [Tooltip("Victoire, ligne 2, plusieurs tirs restants. {0} = score, {1} = objectif, {2} = tirs restants.")]
+        public string stageWonLine2 = "SCORE {0}/{1} - {2} TIRS RESTANTS";
+        [Tooltip("Victoire, ligne 2, 0 ou 1 tir restant. {0} = score, {1} = objectif, {2} = tirs restants.")]
+        public string stageWonLine2OneShot = "SCORE {0}/{1} - {2} TIR RESTANT";
+        [Tooltip("Partie gagnée, ligne 1. {0} = nombre de stages.")]
+        public string runWonLine1 = "PARTIE GAGNÉE";
+        [Tooltip("Partie gagnée, ligne 2. {0} = nombre de stages.")]
+        public string runWonLine2 = "LES {0} STAGES SONT RÉUSSIS";
+        [Tooltip("Défaite, ligne 1. {0} = n° du stage.")]
+        public string defeatLine1 = "PLUS DE TIRS AU STAGE {0}";
+        [Tooltip("Défaite, ligne 2. {0} = score, {1} = objectif.")]
+        public string defeatLine2 = "SCORE {0}/{1}";
+
         static GameTexts current;
 
         /// <summary>The asset assigned to GameBootstrap; code defaults if none.</summary>
@@ -73,6 +97,21 @@ namespace RoguelikePool
                 if (!string.IsNullOrEmpty(s)) return s;
             }
             return "";
+        }
+
+        /// <summary>
+        /// string.Format that never throws: a format broken in the Inspector (e.g. a lone brace) is shown
+        /// as is, with a warning in the console.
+        /// </summary>
+        public static string Format(string format, params object[] values)
+        {
+            if (string.IsNullOrEmpty(format)) return "";
+            try { return string.Format(format, values); }
+            catch (System.FormatException)
+            {
+                Debug.LogWarning($"GameTexts : format invalide \"{format}\" (utiliser {{0}}, {{1}}… ; une accolade seule s'écrit {{{{ ou }}}}).");
+                return format;
+            }
         }
 
         /// <summary>Sets a TextMeshPro text (null-safe). In edit mode, records an Undo step and marks the object dirty.</summary>

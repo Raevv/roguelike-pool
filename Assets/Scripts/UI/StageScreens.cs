@@ -83,19 +83,25 @@ namespace RoguelikePool
         {
             var texts = GameTexts.Current;
             if (manager.CurrentState == StageManager.State.RunWon)
-                Show(GameTexts.Pick(texts.runWonTitles), victoryTitleColor, "PARTIE GAGNÉE", $"LES {manager.StageCount} STAGES SONT RÉUSSIS",
+                Show(GameTexts.Pick(texts.runWonTitles), victoryTitleColor,
+                     GameTexts.Format(texts.runWonLine1, manager.StageCount),
+                     GameTexts.Format(texts.runWonLine2, manager.StageCount),
                      texts.newRunButton, PixelUI.GoldOn, goldButtonLabelColor, manager.RestartRun);
             else
-                Show(GameTexts.Pick(texts.victoryTitles), victoryTitleColor, $"STAGE {manager.StageNumber} RÉUSSI",
-                     $"SCORE {manager.Score}/{manager.Target} - {manager.ShotsLeft} TIR{(manager.ShotsLeft > 1 ? "S" : "")} RESTANT{(manager.ShotsLeft > 1 ? "S" : "")}",
+                Show(GameTexts.Pick(texts.victoryTitles), victoryTitleColor,
+                     GameTexts.Format(texts.stageWonLine1, manager.StageNumber),
+                     GameTexts.Format(manager.ShotsLeft > 1 ? texts.stageWonLine2 : texts.stageWonLine2OneShot,
+                                      manager.Score, manager.Target, manager.ShotsLeft),
                      texts.nextStageButton, PixelUI.GoldOn, goldButtonLabelColor, manager.NextStage);
         }
 
         void OnStageLost()
         {
             var texts = GameTexts.Current;
-            Show(GameTexts.Pick(texts.defeatTitles), defeatTitleColor, $"PLUS DE TIRS AU STAGE {manager.StageNumber}",
-                 $"SCORE {manager.Score}/{manager.Target}", texts.retryButton, PixelUI.Fire, redButtonLabelColor, manager.RestartRun);
+            Show(GameTexts.Pick(texts.defeatTitles), defeatTitleColor,
+                 GameTexts.Format(texts.defeatLine1, manager.StageNumber),
+                 GameTexts.Format(texts.defeatLine2, manager.Score, manager.Target),
+                 texts.retryButton, PixelUI.Fire, redButtonLabelColor, manager.RestartRun);
         }
 
         void Show(string titleText, Color titleColor, string text1, string text2, string label,

@@ -37,3 +37,14 @@ MonoBehaviour:
   hudScoreLabel: SCORE
   hudShotsLabel: TIRS
   scratchMessage: "Blanche empoch\xE9e : tir annul\xE9"
+  powerFormat: '{0}%'
+  hudStageFormat: '{0}/{1}'
+  hudScoreFormat: '{0}/{1}'
+  hudShotsFormat: '{0}/{1}'
+  stageWonLine1: "STAGE {0} R\xC9USSI"
+  stageWonLine2: SCORE {0}/{1} - {2} TIRS RESTANTS
+  stageWonLine2OneShot: SCORE {0}/{1} - {2} TIR RESTANT
+  runWonLine1: "PARTIE GAGN\xC9E"
+  runWonLine2: "LES {0} STAGES SONT R\xC9USSIS"
+  defeatLine1: PLUS DE TIRS AU STAGE {0}
+  defeatLine2: SCORE {0}/{1}

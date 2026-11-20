@@ -147,7 +147,7 @@ namespace RoguelikePool
             if (percent != shownPercent && percentText != null)
             {
                 shownPercent = percent;
-                percentText.text = percent + "%";
+                percentText.text = GameTexts.Format(GameTexts.Current.powerFormat, percent);
             }
             if (percentText == null) { UpdateEmbers(v, glow); return; }
             Color tint = Color.Lerp(PixelUI.TextLight, PixelArt.Hex("ff7a3d"), v * v);

@@ -66,12 +66,13 @@ namespace RoguelikePool
 
         void Redraw()
         {
+            var texts = GameTexts.Current;
             int shots = manager.ShotsLeft;
-            stageValue.text = $"{manager.StageNumber}/{manager.StageCount}";
+            stageValue.text = GameTexts.Format(texts.hudStageFormat, manager.StageNumber, manager.StageCount);
             stageValue.color = stageColor;
-            scoreValue.text = $"{manager.Score}/{manager.Target}";
+            scoreValue.text = GameTexts.Format(texts.hudScoreFormat, manager.Score, manager.Target);
             scoreValue.color = manager.Score >= manager.Target ? scoreReachedColor : scoreColor;
-            shotsValue.text = $"{shots}/{manager.MaxShots}";
+            shotsValue.text = GameTexts.Format(texts.hudShotsFormat, shots, manager.MaxShots);
             shotsValue.color = shots <= 1 ? shotsDangerColor : shotsColor;
         }
 
