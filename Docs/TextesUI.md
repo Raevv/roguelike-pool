@@ -14,6 +14,9 @@ Depuis la branche `ui-text`, chaque texte est un objet **TextMeshPro - Text (UI)
 - **Police** : `Assets/Art/Font/VeniceClassic SDF.asset`, police par défaut de TextMeshPro
   (`Assets/TextMesh Pro/Resources/TMP Settings.asset`). Ombre portée : matériau
   `VeniceClassic SDF Material` (sous l'asset de police), section *Underlay*.
+  Les textes dont la couleur est trop proche de celle de l'ombre (texte noir sur bouton doré)
+  passent automatiquement sur `VeniceClassic SDF NoShadow.mat`, sans ombre (`TextShadow`, seuil
+  d'écart de luminosité 0.25).
   Tailles nettes : multiples de 19 (19, 38, 57).
   Glyphes absents de VeniceClassic (affichés en LiberationSans) : `@ Â È Ê Ë Î Ï Ô Ù Û …`.
 

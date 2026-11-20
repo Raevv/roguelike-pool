@@ -113,6 +113,7 @@ namespace RoguelikePool
             line2.text = text2;
             buttonLabel.text = label;
             buttonLabel.color = labelColor;
+            TextShadow.FitAll(this); // e.g. dark label on the gold button: no shadow
 
             DestroySprites();
             var size = ShotUI.SizeOf(buttonImage.rectTransform);

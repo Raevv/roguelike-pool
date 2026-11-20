@@ -179,7 +179,7 @@ MonoBehaviour:
   m_text: STAGE SUIVANT
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e710dda6353f3e649941e1978a0c72ac, type: 2}
-  m_sharedMaterial: {fileID: -7186048088229564660, guid: e710dda6353f3e649941e1978a0c72ac, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: c54cbe3a2d7ff224fabdbec3ee30ddae, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -576,6 +576,7 @@ MonoBehaviour:
   bannerText: {fileID: 462026227}
   shootLabelDisabledColor: {r: 0.36862746, g: 0.33333334, b: 0.40784314, a: 1}
   fineLabelOnColor: {r: 0.16470589, g: 0.078431375, b: 0.03137255, a: 1}
+  plainTextMaterial: {fileID: 2100000, guid: c54cbe3a2d7ff224fabdbec3ee30ddae, type: 2}
   bannerPaddingX: 40
   bannerPaddingY: 16
 --- !u!114 &236178588

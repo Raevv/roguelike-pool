@@ -74,6 +74,9 @@ namespace RoguelikePool
             scoreValue.color = manager.Score >= manager.Target ? scoreReachedColor : scoreColor;
             shotsValue.text = GameTexts.Format(texts.hudShotsFormat, shots, manager.MaxShots);
             shotsValue.color = shots <= 1 ? shotsDangerColor : shotsColor;
+            TextShadow.Fit(stageValue);
+            TextShadow.Fit(scoreValue);
+            TextShadow.Fit(shotsValue);
         }
 
         /// <summary>Dark plate, brass frame and two column separators with a bright stud.</summary>

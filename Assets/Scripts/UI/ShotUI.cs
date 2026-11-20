@@ -45,6 +45,10 @@ namespace RoguelikePool
         [Tooltip("Couleur du libellé VISÉE FINE quand elle est activée (bouton doré).")]
         [SerializeField] Color fineLabelOnColor = new Color32(0x2a, 0x14, 0x08, 0xff);
 
+        [Header("Police")]
+        [Tooltip("Matériau de la police sans ombre, utilisé automatiquement pour les textes trop sombres (ombre illisible).")]
+        [SerializeField] Material plainTextMaterial;
+
         [Header("Bandeau")]
         [Tooltip("Marge horizontale totale autour du texte du bandeau (pixels art).")]
         [SerializeField] int bannerPaddingX = 40;
@@ -102,6 +106,8 @@ namespace RoguelikePool
             banner.raycastTarget = false;
             bannerText.raycastTarget = false;
             banner.gameObject.SetActive(false);
+            TextShadow.Plain = plainTextMaterial;
+            TextShadow.FitAll(this); // every text of the canvas, with the colors set in the scene
             ApplyScale();
         }
 
@@ -135,6 +141,7 @@ namespace RoguelikePool
             var texts = GameTexts.Current;
             shootLabel.text = canShoot ? texts.shootButton : texts.shootButtonBusy;
             shootLabel.color = canShoot ? shootLabelColor : shootLabelDisabledColor;
+            TextShadow.Fit(shootLabel);
         }
 
         public void ShowMessage(string message, float duration)
@@ -228,6 +235,7 @@ namespace RoguelikePool
                 FineAim = !FineAim;
                 fineImage.sprite = FineAim ? fineOn : fineOff;
                 fineLabel.color = FineAim ? fineLabelOnColor : fineLabelOffColor;
+                TextShadow.Fit(fineLabel);
                 var normal = fineImage.sprite;
                 fineButton.spriteState = new SpriteState
                 {
