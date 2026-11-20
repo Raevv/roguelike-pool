@@ -55,7 +55,7 @@ namespace RoguelikePool
         IEnumerator CancelShot()
         {
             rewinding = true;
-            ui.ShowMessage("Blanche empochée : tir annulé", restoreDelay + 1.2f);
+            ui.ShowMessage(GameTexts.Current.scratchMessage, restoreDelay + 1.2f);
             yield return new WaitForSeconds(restoreDelay);
             foreach (var (ball, position) in snapshot) ball.ResetTo(position);
             rewinding = false;

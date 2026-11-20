@@ -44,9 +44,18 @@ namespace RoguelikePool
             manager = stageManager;
             plate.raycastTarget = false; // never blocks aiming
             foreach (var text in GetComponentsInChildren<TMP_Text>(true)) text.raycastTarget = false;
+            ApplyFixedTexts(GameTexts.Current);
             DrawPlate();
             manager.Changed += Redraw;
             Redraw();
+        }
+
+        /// <summary>Writes the column labels (STAGE, SCORE, TIRS) from <see cref="GameTexts"/>.</summary>
+        public void ApplyFixedTexts(GameTexts texts, bool inEditor = false)
+        {
+            GameTexts.Write(stageLabel, texts.hudStageLabel, inEditor);
+            GameTexts.Write(scoreLabel, texts.hudScoreLabel, inEditor);
+            GameTexts.Write(shotsLabel, texts.hudShotsLabel, inEditor);
         }
 
         void OnDestroy()

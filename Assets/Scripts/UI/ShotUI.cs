@@ -67,7 +67,6 @@ namespace RoguelikePool
         Image fineImage;
         Sprite fineOff, fineOffPressed, fineOn, fineOnPressed;
         Color shootLabelColor, fineLabelOffColor;
-        string shootText;
         Vector2 bannerBasePosition;
         Coroutine messageRoutine;
         int lastScale = -1, lastScreenHeight = -1;
@@ -94,6 +93,7 @@ namespace RoguelikePool
             panelImage.type = Image.Type.Tiled;
             panelImage.pixelsPerUnitMultiplier = 1f;
 
+            ApplyFixedTexts(GameTexts.Current);
             gauge.Init(0.5f);
             SetupShootButton();
             SetupFineAimButton();
@@ -103,6 +103,14 @@ namespace RoguelikePool
             bannerText.raycastTarget = false;
             banner.gameObject.SetActive(false);
             ApplyScale();
+        }
+
+        /// <summary>Writes the fixed texts (FORCE, TIRER, VISÉE FINE) from <see cref="GameTexts"/>.</summary>
+        public void ApplyFixedTexts(GameTexts texts, bool inEditor = false)
+        {
+            GameTexts.Write(forceTitle, texts.powerTitle, inEditor);
+            GameTexts.Write(shootLabel, texts.shootButton, inEditor);
+            GameTexts.Write(fineLabel, texts.fineAimButton, inEditor);
         }
 
         void Update() => ApplyScale();
@@ -124,7 +132,8 @@ namespace RoguelikePool
         {
             if (shootButton.interactable == canShoot) return;
             shootButton.interactable = canShoot;
-            shootLabel.text = canShoot ? shootText : "...";
+            var texts = GameTexts.Current;
+            shootLabel.text = canShoot ? texts.shootButton : texts.shootButtonBusy;
             shootLabel.color = canShoot ? shootLabelColor : shootLabelDisabledColor;
         }
 
@@ -191,7 +200,6 @@ namespace RoguelikePool
                 disabledSprite = PixelUI.Button(size.x, size.y, PixelUI.Disabled, null, 2, false, false)
             };
             shootLabel.raycastTarget = false;
-            shootText = shootLabel.text;
             shootLabelColor = shootLabel.color;
             shootButton.onClick.AddListener(() =>
             {

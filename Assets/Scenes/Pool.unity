@@ -3630,6 +3630,7 @@ MonoBehaviour:
   shotUI: {fileID: 236178587}
   stageHUD: {fileID: 866269368}
   stageScreens: {fileID: 423600017}
+  gameTexts: {fileID: 11400000, guid: 1d7bd82a04f86b94cbb27b3997529122, type: 2}
 --- !u!4 &1934886592
 Transform:
   m_ObjectHideFlags: 0

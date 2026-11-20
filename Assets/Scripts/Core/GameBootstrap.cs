@@ -26,11 +26,14 @@ namespace RoguelikePool
         public ShotUI shotUI;
         public StageHUD stageHUD;
         public StageScreens stageScreens;
+        [Tooltip("Tous les textes du jeu : titres, phrases, boutons, formats (Assets/Data/GameTexts).")]
+        public GameTexts gameTexts;
 
         void Awake()
         {
             if (ballPhysics != null) BallPhysicsSettings.Current = ballPhysics;
             else Debug.LogWarning("GameBootstrap : BallPhysicsSettings non assigné, valeurs par défaut du code utilisées.");
+            if (gameTexts != null) GameTexts.Current = gameTexts; // otherwise GameTexts.Current warns and uses code defaults
 
             // The table placed in the scene, otherwise an instance of the prefab.
             var table = FindAnyObjectByType<PoolTable>();

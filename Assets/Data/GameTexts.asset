@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a3f793c1bb3bfb41b81780f54db0bb3, type: 3}
+  m_Name: GameTexts
+  m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.GameTexts
+  victoryTitles:
+  - VICTOIRE !
+  - "BIEN JOU\xC9 !"
+  - SUPERBE !
+  - "STAGE NETTOY\xC9 !"
+  runWonTitles:
+  - BRAVO !
+  - CHAMPION !
+  - QUELLE PARTIE !
+  defeatTitles:
+  - "D\xC9FAITE"
+  - PERDU !
+  - "RAT\xC9..."
+  - DOMMAGE !
+  shootButton: TIRER
+  shootButtonBusy: ...
+  fineAimButton: "VIS\xC9E\nFINE"
+  nextStageButton: STAGE SUIVANT
+  retryButton: RECOMMENCER
+  newRunButton: RECOMMENCER
+  powerTitle: FORCE
+  hudStageLabel: STAGE
+  hudScoreLabel: SCORE
+  hudShotsLabel: TIRS
+  scratchMessage: "Blanche empoch\xE9e : tir annul\xE9"

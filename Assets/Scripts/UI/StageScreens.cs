@@ -81,19 +81,21 @@ namespace RoguelikePool
 
         void OnStageWon()
         {
+            var texts = GameTexts.Current;
             if (manager.CurrentState == StageManager.State.RunWon)
-                Show("BRAVO !", victoryTitleColor, "PARTIE GAGNÉE", $"LES {manager.StageCount} STAGES SONT RÉUSSIS",
-                     "RECOMMENCER", PixelUI.GoldOn, goldButtonLabelColor, manager.RestartRun);
+                Show(GameTexts.Pick(texts.runWonTitles), victoryTitleColor, "PARTIE GAGNÉE", $"LES {manager.StageCount} STAGES SONT RÉUSSIS",
+                     texts.newRunButton, PixelUI.GoldOn, goldButtonLabelColor, manager.RestartRun);
             else
-                Show("VICTOIRE !", victoryTitleColor, $"STAGE {manager.StageNumber} RÉUSSI",
+                Show(GameTexts.Pick(texts.victoryTitles), victoryTitleColor, $"STAGE {manager.StageNumber} RÉUSSI",
                      $"SCORE {manager.Score}/{manager.Target} - {manager.ShotsLeft} TIR{(manager.ShotsLeft > 1 ? "S" : "")} RESTANT{(manager.ShotsLeft > 1 ? "S" : "")}",
-                     "STAGE SUIVANT", PixelUI.GoldOn, goldButtonLabelColor, manager.NextStage);
+                     texts.nextStageButton, PixelUI.GoldOn, goldButtonLabelColor, manager.NextStage);
         }
 
         void OnStageLost()
         {
-            Show("DÉFAITE", defeatTitleColor, $"PLUS DE TIRS AU STAGE {manager.StageNumber}",
-                 $"SCORE {manager.Score}/{manager.Target}", "RECOMMENCER", PixelUI.Fire, redButtonLabelColor, manager.RestartRun);
+            var texts = GameTexts.Current;
+            Show(GameTexts.Pick(texts.defeatTitles), defeatTitleColor, $"PLUS DE TIRS AU STAGE {manager.StageNumber}",
+                 $"SCORE {manager.Score}/{manager.Target}", texts.retryButton, PixelUI.Fire, redButtonLabelColor, manager.RestartRun);
         }
 
         void Show(string titleText, Color titleColor, string text1, string text2, string label,
