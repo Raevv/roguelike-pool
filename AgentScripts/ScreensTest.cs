@@ -46,9 +46,9 @@ public static class ScreensTest
 
         await Task.Delay(300);
         Vector2 center = new Vector2(Screen.width * 0.4f, Screen.height * 0.5f);
-        string texts = string.Join(" | ", Object.FindObjectsByType<RawImage>(FindObjectsInactive.Exclude)
-            .Where(r => r.transform.parent != null && r.transform.parent.name == "Panel" && r.texture != null)
-            .Select(r => r.name + "=" + r.texture.name));
+        string texts = string.Join(" | ", Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsInactive.Exclude)
+            .Where(t => t.GetComponentInParent<StageScreens>() != null)
+            .Select(t => t.name + "=" + t.text));
         return $"{mode}: state={sm.CurrentState} st{sm.StageNumber} {sm.Score}/{sm.Target} shots {sm.ShotsLeft}/{sm.MaxShots} " +
                $"shown={screens.IsShown} locked={rules.Locked} centerBlocked={ui.IsOverUI(center)} [{texts}]";
     }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -13,10 +14,42 @@ namespace RoguelikePool
     /// power gauge, a fine-aim toggle and the TIRER button at the bottom, plus a banner for short
     /// messages over the table. The canvas uses the same integer pixel scale as the world
     /// (<see cref="PixelCameraRig.Scale"/>), so one canvas unit = one art pixel.
+    /// The whole hierarchy lives in the scene (Tools > Roguelike Pool > 8 Build UI); every text is a
+    /// TextMeshPro object referenced here. Only the pixel-art backgrounds are generated at runtime.
     /// </summary>
     public class ShotUI : MonoBehaviour
     {
         public event Action ShootClicked;
+
+        [Header("Objets de la scène")]
+        [SerializeField] CanvasScaler scaler;
+        [SerializeField] GraphicRaycaster raycaster;
+        [Tooltip("Panneau de droite (jauge, visée fine, tir).")]
+        [SerializeField] Image panelImage;
+        [Tooltip("Titre FORCE en haut du panneau.")]
+        [SerializeField] TMP_Text forceTitle;
+        [SerializeField] PowerGauge gauge;
+        [SerializeField] Button shootButton;
+        [SerializeField] TMP_Text shootLabel;
+        [SerializeField] Button fineButton;
+        [SerializeField] TMP_Text fineLabel;
+        [Tooltip("Zone de l'écran à gauche du panneau (au-dessus de la table).")]
+        [SerializeField] RectTransform tableArea;
+        [Tooltip("Fond du bandeau de message ; sa taille suit le texte.")]
+        [SerializeField] RawImage banner;
+        [SerializeField] TMP_Text bannerText;
+
+        [Header("Couleurs des libellés")]
+        [Tooltip("Couleur du libellé TIRER quand le tir est impossible (boules en mouvement).")]
+        [SerializeField] Color shootLabelDisabledColor = new Color32(0x5e, 0x55, 0x68, 0xff);
+        [Tooltip("Couleur du libellé VISÉE FINE quand elle est activée (bouton doré).")]
+        [SerializeField] Color fineLabelOnColor = new Color32(0x2a, 0x14, 0x08, 0xff);
+
+        [Header("Bandeau")]
+        [Tooltip("Marge horizontale totale autour du texte du bandeau (pixels art).")]
+        [SerializeField] int bannerPaddingX = 40;
+        [Tooltip("Marge verticale totale autour du texte du bandeau (pixels art).")]
+        [SerializeField] int bannerPaddingY = 16;
 
         public float Power
         {
@@ -28,61 +61,47 @@ namespace RoguelikePool
         public bool FineAim { get; private set; }
 
         /// <summary>Screen area left of the panel (over the table), for overlays such as the stage HUD.</summary>
-        public RectTransform TableArea { get; private set; }
-
-        const int ShootW = 96, ShootH = 60, FineW = 92, FineH = 48;
+        public RectTransform TableArea => tableArea;
 
         PixelCameraRig rig;
-        CanvasScaler scaler;
-        GraphicRaycaster raycaster;
-        RectTransform panel;
-        PowerGauge gauge;
-        Button shootButton;
-        Button fineButton;
         Image fineImage;
         Sprite fineOff, fineOffPressed, fineOn, fineOnPressed;
-        RawImage banner;
+        Color shootLabelColor, fineLabelOffColor;
+        string shootText;
+        Vector2 bannerBasePosition;
         Coroutine messageRoutine;
         int lastScale = -1, lastScreenHeight = -1;
         readonly List<RaycastResult> raycastResults = new List<RaycastResult>();
 
-        public void Build(float panelFraction, PixelCameraRig pixelRig)
+        public void Init(float panelFraction, PixelCameraRig pixelRig)
         {
             rig = pixelRig;
             EnsureEventSystem();
 
-            var canvasGo = new GameObject("ShotCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            canvasGo.transform.SetParent(transform, false);
-            var canvas = canvasGo.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.pixelPerfect = true;
-            scaler = canvasGo.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
             scaler.referencePixelsPerUnit = 1f; // sprites are 1 texel per unit
-            canvas.referencePixelsPerUnit = 1f;
-            raycaster = canvasGo.GetComponent<GraphicRaycaster>();
 
-            // Panel.
-            var panelImage = new GameObject("Panel", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-            panelImage.transform.SetParent(canvasGo.transform, false);
-            panelImage.sprite = PixelUI.Panel();
-            panelImage.type = Image.Type.Tiled;
-            panelImage.pixelsPerUnitMultiplier = 1f;
-            panel = panelImage.rectTransform;
+            // The panel and the table area follow the camera rig's panel fraction.
+            var panel = panelImage.rectTransform;
             panel.anchorMin = new Vector2(1f - panelFraction, 0f);
             panel.anchorMax = Vector2.one;
             panel.offsetMin = panel.offsetMax = Vector2.zero;
+            tableArea.anchorMin = Vector2.zero;
+            tableArea.anchorMax = new Vector2(1f - panelFraction, 1f);
+            tableArea.offsetMin = tableArea.offsetMax = Vector2.zero;
 
-            var title = PixelUI.Text(panel, "Title", "FORCE", PixelUI.Gold, 2);
-            PixelUI.Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(1f, -14f));
+            panelImage.sprite = PixelUI.Panel();
+            panelImage.type = Image.Type.Tiled;
+            panelImage.pixelsPerUnitMultiplier = 1f;
 
-            gauge = new GameObject("PowerGauge", typeof(RectTransform)).AddComponent<PowerGauge>();
-            gauge.Build(panel, 0.5f);
-            PixelUI.Place((RectTransform)gauge.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 160f));
+            gauge.Init(0.5f);
+            SetupShootButton();
+            SetupFineAimButton();
 
-            BuildFineAimButton();
-            BuildShootButton();
-            BuildBanner(canvasGo.transform, panelFraction);
+            bannerBasePosition = banner.rectTransform.anchoredPosition;
+            banner.raycastTarget = false;
+            bannerText.raycastTarget = false;
+            banner.gameObject.SetActive(false);
             ApplyScale();
         }
 
@@ -91,6 +110,7 @@ namespace RoguelikePool
         /// <summary>Follows the world pixel scale and resizes the gauge to the available height.</summary>
         void ApplyScale()
         {
+            if (scaler == null) return;
             int k = rig != null ? rig.Scale : 1;
             if (k == lastScale && Screen.height == lastScreenHeight) return;
             lastScale = k;
@@ -102,7 +122,10 @@ namespace RoguelikePool
 
         public void SetCanShoot(bool canShoot)
         {
-            if (shootButton.interactable != canShoot) shootButton.interactable = canShoot;
+            if (shootButton.interactable == canShoot) return;
+            shootButton.interactable = canShoot;
+            shootLabel.text = canShoot ? shootText : "...";
+            shootLabel.color = canShoot ? shootLabelColor : shootLabelDisabledColor;
         }
 
         public void ShowMessage(string message, float duration)
@@ -130,43 +153,46 @@ namespace RoguelikePool
 
         IEnumerator MessageRoutine(string message, float duration)
         {
-            if (banner.texture != null) Destroy(banner.texture);
-            banner.texture = PixelUI.Banner(message, 2);
-            banner.SetNativeSize();
             banner.gameObject.SetActive(true);
+            bannerText.text = message;
+            bannerText.ForceMeshUpdate();
+            // The plate is sized around the text, in whole art pixels.
+            int w = Mathf.CeilToInt(bannerText.preferredWidth) + bannerPaddingX;
+            int h = Mathf.CeilToInt(bannerText.preferredHeight) + bannerPaddingY;
+            if (banner.texture != null) Destroy(banner.texture);
+            banner.texture = PixelUI.Banner(w, h);
+            var rt = banner.rectTransform;
+            rt.sizeDelta = new Vector2(w, h);
 
             // Quick pixel "pop": drop in by a few art pixels.
-            var rt = banner.rectTransform;
             for (float t = 0f; t < 0.12f; t += Time.deltaTime)
             {
-                rt.anchoredPosition = new Vector2(0f, Mathf.Round(Mathf.Lerp(8f, 0f, t / 0.12f)));
+                rt.anchoredPosition = bannerBasePosition + new Vector2(0f, Mathf.Round(Mathf.Lerp(8f, 0f, t / 0.12f)));
                 yield return null;
             }
-            rt.anchoredPosition = Vector2.zero;
+            rt.anchoredPosition = bannerBasePosition;
             yield return new WaitForSeconds(duration);
             banner.gameObject.SetActive(false);
             messageRoutine = null;
         }
 
-        void BuildShootButton()
+        void SetupShootButton()
         {
-            var image = new GameObject("ShootButton", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-            image.transform.SetParent(panel, false);
-            image.sprite = PixelUI.Button(ShootW, ShootH, PixelUI.Fire, "TIRER", 2, false, false);
-            image.rectTransform.sizeDelta = new Vector2(ShootW, ShootH);
-            PixelUI.Place(image.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 10f));
-
-            shootButton = image.gameObject.AddComponent<Button>();
-            shootButton.targetGraphic = image;
+            var image = (Image)shootButton.targetGraphic;
+            var size = SizeOf(image.rectTransform);
+            image.sprite = PixelUI.Button(size.x, size.y, PixelUI.Fire, null, 2, false, false);
             shootButton.navigation = new Navigation { mode = Navigation.Mode.None };
             shootButton.transition = Selectable.Transition.SpriteSwap;
             shootButton.spriteState = new SpriteState
             {
-                highlightedSprite = PixelUI.Button(ShootW, ShootH, PixelUI.Fire, "TIRER", 2, false, true),
-                pressedSprite = PixelUI.Button(ShootW, ShootH, PixelUI.Fire, "TIRER", 2, true, true),
+                highlightedSprite = PixelUI.Button(size.x, size.y, PixelUI.Fire, null, 2, false, true),
+                pressedSprite = PixelUI.Button(size.x, size.y, PixelUI.Fire, null, 2, true, true),
                 selectedSprite = image.sprite,
-                disabledSprite = PixelUI.Button(ShootW, ShootH, PixelUI.Disabled, "...", 2, false, false)
+                disabledSprite = PixelUI.Button(size.x, size.y, PixelUI.Disabled, null, 2, false, false)
             };
+            shootLabel.raycastTarget = false;
+            shootText = shootLabel.text;
+            shootLabelColor = shootLabel.color;
             shootButton.onClick.AddListener(() =>
             {
                 if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
@@ -174,21 +200,18 @@ namespace RoguelikePool
             });
         }
 
-        void BuildFineAimButton()
+        void SetupFineAimButton()
         {
-            fineOff = PixelUI.Button(FineW, FineH, PixelUI.Stone, "VISÉE\nFINE", 2, false, false);
-            fineOffPressed = PixelUI.Button(FineW, FineH, PixelUI.Stone, "VISÉE\nFINE", 2, true, true);
-            fineOn = PixelUI.Button(FineW, FineH, PixelUI.GoldOn, "VISÉE\nFINE", 2, false, false);
-            fineOnPressed = PixelUI.Button(FineW, FineH, PixelUI.GoldOn, "VISÉE\nFINE", 2, true, true);
-
-            fineImage = new GameObject("FineAimButton", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-            fineImage.transform.SetParent(panel, false);
+            fineImage = (Image)fineButton.targetGraphic;
+            var size = SizeOf(fineImage.rectTransform);
+            fineOff = PixelUI.Button(size.x, size.y, PixelUI.Stone, null, 2, false, false);
+            fineOffPressed = PixelUI.Button(size.x, size.y, PixelUI.Stone, null, 2, true, true);
+            fineOn = PixelUI.Button(size.x, size.y, PixelUI.GoldOn, null, 2, false, false);
+            fineOnPressed = PixelUI.Button(size.x, size.y, PixelUI.GoldOn, null, 2, true, true);
             fineImage.sprite = fineOff;
-            fineImage.rectTransform.sizeDelta = new Vector2(FineW, FineH);
-            PixelUI.Place(fineImage.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 80f));
+            fineLabel.raycastTarget = false;
+            fineLabelOffColor = fineLabel.color;
 
-            fineButton = fineImage.gameObject.AddComponent<Button>();
-            fineButton.targetGraphic = fineImage;
             fineButton.navigation = new Navigation { mode = Navigation.Mode.None };
             fineButton.transition = Selectable.Transition.SpriteSwap;
             fineButton.spriteState = new SpriteState { pressedSprite = fineOffPressed, highlightedSprite = fineOff, selectedSprite = fineOff };
@@ -196,6 +219,7 @@ namespace RoguelikePool
             {
                 FineAim = !FineAim;
                 fineImage.sprite = FineAim ? fineOn : fineOff;
+                fineLabel.color = FineAim ? fineLabelOnColor : fineLabelOffColor;
                 var normal = fineImage.sprite;
                 fineButton.spriteState = new SpriteState
                 {
@@ -207,21 +231,10 @@ namespace RoguelikePool
             });
         }
 
-        void BuildBanner(Transform canvas, float panelFraction)
+        /// <summary>Size of a fixed-size UI element in whole art pixels (for the generated sprites).</summary>
+        public static Vector2Int SizeOf(RectTransform rt)
         {
-            // Container centered on the table area (left of the panel).
-            var area = new GameObject("BannerArea", typeof(RectTransform)).GetComponent<RectTransform>();
-            area.SetParent(canvas, false);
-            area.anchorMin = Vector2.zero;
-            area.anchorMax = new Vector2(1f - panelFraction, 1f);
-            area.offsetMin = area.offsetMax = Vector2.zero;
-            TableArea = area;
-
-            banner = new GameObject("Banner", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-            banner.transform.SetParent(area, false);
-            banner.raycastTarget = false;
-            PixelUI.Place(banner.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero);
-            banner.gameObject.SetActive(false);
+            return new Vector2Int(Mathf.Max(8, Mathf.RoundToInt(rt.sizeDelta.x)), Mathf.Max(8, Mathf.RoundToInt(rt.sizeDelta.y)));
         }
 
         static void EnsureEventSystem()

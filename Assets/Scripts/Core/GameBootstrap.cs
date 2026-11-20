@@ -22,6 +22,10 @@ namespace RoguelikePool
         public PoolTable tablePrefab;
         [Tooltip("Prefab de la queue (Assets/Prefabs/Cue), instancié si la scène ne contient pas déjà une queue.")]
         public CueStick cuePrefab;
+        [Header("Interface (objets de la scène, Tools > Roguelike Pool > 8 Build UI)")]
+        public ShotUI shotUI;
+        public StageHUD stageHUD;
+        public StageScreens stageScreens;
 
         void Awake()
         {
@@ -65,8 +69,13 @@ namespace RoguelikePool
 
             var preview = new GameObject("TrajectoryPreview").AddComponent<TrajectoryPreview>();
 
-            var ui = new GameObject("ShotUI").AddComponent<ShotUI>();
-            ui.Build(uiPanelFraction, rig);
+            var ui = shotUI != null ? shotUI : FindAnyObjectByType<ShotUI>(FindObjectsInactive.Include);
+            if (ui == null)
+            {
+                Debug.LogError("GameBootstrap : aucune ShotUI dans la scène (Tools > Roguelike Pool > 8 Build UI).");
+                return;
+            }
+            ui.Init(uiPanelFraction, rig);
 
             var rules = new GameObject("TableRules").AddComponent<TableRules>();
             rules.Init(ui);
@@ -75,8 +84,12 @@ namespace RoguelikePool
             {
                 var stages = new GameObject("StageManager").AddComponent<StageManager>();
                 stages.Init(stageCatalog, rules);
-                new GameObject("StageHUD").AddComponent<StageHUD>().Build(ui.TableArea, stages);
-                new GameObject("StageScreens").AddComponent<StageScreens>().Build(ui, stages);
+                var hud = stageHUD != null ? stageHUD : FindAnyObjectByType<StageHUD>(FindObjectsInactive.Include);
+                var screens = stageScreens != null ? stageScreens : FindAnyObjectByType<StageScreens>(FindObjectsInactive.Include);
+                if (hud != null) hud.Init(stages);
+                else Debug.LogError("GameBootstrap : aucun StageHUD dans la scène.");
+                if (screens != null) screens.Init(ui, stages);
+                else Debug.LogError("GameBootstrap : aucun StageScreens dans la scène.");
             }
             else
                 Debug.LogError("GameBootstrap : StageCatalog manquant, vide ou avec un stage vide : pas de boucle de stages.");

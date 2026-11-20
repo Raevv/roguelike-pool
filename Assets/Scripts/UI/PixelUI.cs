@@ -44,7 +44,7 @@ namespace RoguelikePool
             text = PixelArt.Hex("5e5568"), textShadow = PixelArt.Hex("07040b")
         };
 
-        /// <summary>Beveled button with a brass frame and a baked label.</summary>
+        /// <summary>Beveled button with a brass frame. Pass a null label: button texts are TextMeshPro children.</summary>
         public static Sprite Button(int w, int h, ButtonStyle style, string label, int textScale, bool pressed, bool hover)
         {
             var px = new Color32[w * h];
@@ -118,11 +118,9 @@ namespace RoguelikePool
             return PixelArt.ToSprite(tex, px, 1f, new Vector2(0.5f, 0.5f), new Vector4(B, B, B, B));
         }
 
-        /// <summary>Dark banner plate with gold trims sized around a text.</summary>
-        public static Texture2D Banner(string text, int textScale)
+        /// <summary>Dark banner plate with gold trims and diamond end caps (the text is a TextMeshPro child).</summary>
+        public static Texture2D Banner(int w, int h)
         {
-            var size = PixelFont.Measure(text, textScale);
-            int w = size.x + 40, h = size.y + 18;
             var px = new Color32[w * h];
             var plate = PixelArt.Hex("0c0a14");
             for (int y = 0; y < h; y++)
@@ -145,30 +143,10 @@ namespace RoguelikePool
                 px[yy * w + i] = c;
                 px[yy * w + (w - 1 - i)] = c;
             }
-            int tx = (w - size.x) / 2, ty = h - 1 - (h - size.y) / 2;
-            PixelFont.Draw(px, w, h, text, tx + textScale, ty - textScale, TextShadow, textScale);
-            PixelFont.Draw(px, w, h, text, tx, ty, Gold, textScale);
             var tex = PixelArt.NewTexture(w, h, "Banner");
             tex.SetPixels32(px);
             tex.Apply(false, false);
             return tex;
-        }
-
-        public static RawImage Text(Transform parent, string name, string text, Color32 color, int scale)
-        {
-            var go = new GameObject(name, typeof(RectTransform), typeof(RawImage));
-            go.transform.SetParent(parent, false);
-            var img = go.GetComponent<RawImage>();
-            img.raycastTarget = false;
-            SetText(img, text, color, scale);
-            return img;
-        }
-
-        public static void SetText(RawImage img, string text, Color32 color, int scale)
-        {
-            if (img.texture != null) Object.Destroy(img.texture);
-            img.texture = PixelFont.Render(text, color, TextShadow, scale);
-            img.SetNativeSize();
         }
 
         public static void Place(RectTransform rt, Vector2 anchor, Vector2 pivot, Vector2 position)

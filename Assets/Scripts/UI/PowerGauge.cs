@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -21,6 +22,8 @@ namespace RoguelikePool
         public float maxEmbersPerSecond = 80f;
         [Tooltip("Vitesse du reflet qui remonte dans la jauge (cycles/s).")]
         public float sweepSpeed = 0.3f;
+        [Tooltip("Texte du pourcentage sous la jauge (objet TextMeshPro de la scène).")]
+        [SerializeField] TMP_Text percentText;
 
         const int Width = 30;
         const int FrameLeft = 3, FrameRight = 26;  // frame columns (inclusive)
@@ -33,7 +36,7 @@ namespace RoguelikePool
         int AreaHeight => AreaTop - AreaBottom + 1;
 
         RectTransform root;
-        RawImage gaugeImage, halo, percentText;
+        RawImage gaugeImage, halo;
         Texture2D texture;
         Color32[] pixels;
         RectTransform handleArea;
@@ -56,10 +59,9 @@ namespace RoguelikePool
             PixelArt.Hex("f0861c"), PixelArt.Hex("e8401f"), PixelArt.Hex("cf1a22")
         };
 
-        public void Build(Transform parent, float initialValue)
+        public void Init(float initialValue)
         {
             root = (RectTransform)transform;
-            root.SetParent(parent, false);
 
             halo = new GameObject("Halo", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
             halo.transform.SetParent(root, false);
@@ -93,11 +95,7 @@ namespace RoguelikePool
             Slider.maxValue = 1f;
             Slider.value = initialValue;
 
-            percentText = PixelUI.Text(root, "Percent", "50%", Color.white, 2);
-            var prt = percentText.rectTransform;
-            prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0f);
-            prt.pivot = new Vector2(0.5f, 1f);
-            prt.anchoredPosition = new Vector2(1f, -6f);
+            if (percentText != null) percentText.transform.SetAsLastSibling(); // above the runtime-built gauge layers
         }
 
         /// <summary>Resizes the gauge (art pixels). Called when the screen / pixel scale changes.</summary>
@@ -145,13 +143,13 @@ namespace RoguelikePool
 
             halo.color = new Color(1f, 0.42f, 0.12f, glow * (0.35f + 0.45f * pulse));
 
-            // Text is rendered white (dark shadow) once per value; the color is a tint.
             int percent = Mathf.RoundToInt(v * 100f);
-            if (percent != shownPercent)
+            if (percent != shownPercent && percentText != null)
             {
                 shownPercent = percent;
-                PixelUI.SetText(percentText, percent + "%", Color.white, 2);
+                percentText.text = percent + "%";
             }
+            if (percentText == null) { UpdateEmbers(v, glow); return; }
             Color tint = Color.Lerp(PixelUI.TextLight, PixelArt.Hex("ff7a3d"), v * v);
             if (glow > 0f) tint = Color.Lerp(tint, PixelArt.Hex("ffe9a0"), heat * 0.6f);
             percentText.color = tint;
