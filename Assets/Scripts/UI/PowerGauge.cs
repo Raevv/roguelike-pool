@@ -23,7 +23,7 @@ namespace RoguelikePool
         public float maxEmbersPerSecond = 80f;
         [Tooltip("Vitesse du reflet qui remonte dans la jauge (cycles/s).")]
         public float sweepSpeed = 0.3f;
-        [Tooltip("Texte du pourcentage sous la jauge (objet TextMeshPro de la scène).")]
+        [Tooltip("Texte du pourcentage au-dessus de la jauge (objet TextMeshPro de la scène).")]
         [SerializeField] TMP_Text percentText;
         [Tooltip("Largeur dessinée de la barre (unités du canvas), centrée dans le RectTransform. La zone cliquable se règle avec Touch Width. 0 = toute la largeur.")]
         [SerializeField] float visualWidth = 52f;

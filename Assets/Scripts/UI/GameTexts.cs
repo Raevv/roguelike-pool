@@ -53,7 +53,7 @@ namespace RoguelikePool
         public string scratchMessage = "Blanche empochée : tir annulé";
 
         [Header("Formats : {0}, {1}, {2} sont remplacés par les valeurs")]
-        [Tooltip("Sous la jauge. {0} = puissance en %.")]
+        [Tooltip("Au-dessus de la jauge. {0} = puissance en %.")]
         public string powerFormat = "{0}%";
         [Tooltip("Titre du stage au-dessus de la table. {0} = stage actuel, {1} = nombre de stages.")]
         public string hudStageFormat = "Stage {0}";

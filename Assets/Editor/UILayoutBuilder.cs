@@ -490,6 +490,20 @@ public static class UILayoutBuilder
         return Save(sb.ToString());
     }
 
+    // ---------------------------------------------------------------- Step 9: percentage above the bar
+
+    [MenuItem("Tools/Roguelike Pool/UI Layout/9. Power percentage above the bar")]
+    public static string Step9()
+    {
+        var gauge = Object.FindAnyObjectByType<PowerGauge>(FindObjectsInactive.Include);
+        if (gauge == null) throw new System.InvalidOperationException("No PowerGauge in the scene.");
+        var text = (TMP_Text)new SerializedObject(gauge).FindProperty("percentText").objectReferenceValue;
+        if (text == null) throw new System.InvalidOperationException("PowerGauge has no percent text.");
+        // Hangs from the top of the bar (it follows the bar when RightColumnLayout moves it), 8 units above.
+        Place(text.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), new Vector2(2f, 8f), null);
+        return Save("Step 9 done.");
+    }
+
     /// <summary>Places a Content child by its mockup edges, anchored to the content's bottom-right corner.</summary>
     static void PlaceBottomRight(RectTransform rt, float left, float top, float right, float bottom)
     {
