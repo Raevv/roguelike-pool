@@ -25,8 +25,10 @@ namespace RoguelikePool
         public float sweepSpeed = 0.3f;
         [Tooltip("Texte du pourcentage sous la jauge (objet TextMeshPro de la scène).")]
         [SerializeField] TMP_Text percentText;
-        [Tooltip("Largeur dessinée de la barre (unités du canvas), centrée dans le RectTransform. Le RectTransform entier reste la zone cliquable / touchable. 0 = toute la largeur.")]
+        [Tooltip("Largeur dessinée de la barre (unités du canvas), centrée dans le RectTransform. La zone cliquable se règle avec Touch Width. 0 = toute la largeur.")]
         [SerializeField] float visualWidth = 52f;
+        [Tooltip("Largeur de la zone cliquable / touchable (unités du canvas), centrée sur la barre. Peut dépasser le RectTransform. 0 = largeur du RectTransform.")]
+        [SerializeField] float touchWidth = 70f;
 
         // Sizes in art pixels. The frame is visualWidth wide, centered in the RectTransform (the touch zone);
         // the texture overflows the frame by Pad columns on each side (brass studs).
@@ -46,6 +48,7 @@ namespace RoguelikePool
 
         RectTransform root;
         Vector2 fittedRect;
+        RectTransform touchZone;
         RawImage gaugeImage, halo;
         Texture2D texture;
         Color32[] pixels;
@@ -85,10 +88,16 @@ namespace RoguelikePool
             emberLayer.SetParent(root, false);
             emberLayer.anchorMin = emberLayer.anchorMax = emberLayer.pivot = Vector2.zero;
 
-            // Slider over the tube: a transparent raycast target + an invisible handle in a container
-            // matching the fill area, so clicks map 1:1 to the drawn fill.
-            var hit = gameObject.AddComponent<Image>();
+            // Slider over the tube: a transparent raycast target (the TouchZone child, touchWidth wide; its
+            // pointer events bubble up to the Slider) + an invisible handle in a container matching the fill
+            // area vertically, so clicks map 1:1 to the drawn fill.
+            touchZone = new GameObject("TouchZone", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            touchZone.SetParent(root, false);
+            touchZone.SetAsFirstSibling();
+            var hit = touchZone.GetComponent<Image>();
             hit.color = new Color(0f, 0f, 0f, 0f);
+            touchZone.anchorMin = Vector2.zero;
+            touchZone.anchorMax = Vector2.one;
             Slider = gameObject.AddComponent<Slider>();
             handleArea = new GameObject("HandleArea", typeof(RectTransform)).GetComponent<RectTransform>();
             handleArea.SetParent(root, false);
@@ -108,7 +117,7 @@ namespace RoguelikePool
         }
 
         /// <summary>
-        /// Follows the RectTransform (the touch zone): rebuilds the textures when its size changes. The frame
+        /// Follows the RectTransform: rebuilds the textures when its size changes. The frame
         /// is drawn <see cref="visualWidth"/> wide, centered, so the bar can look thin while staying easy to
         /// touch. Called every frame (cheap when nothing changed), so the layout can be edited live.
         /// </summary>
@@ -143,7 +152,7 @@ namespace RoguelikePool
             hrt.offsetMin = new Vector2(inset - HaloPad * px, -HaloPad * px);
             hrt.offsetMax = new Vector2(-(inset - HaloPad * px), HaloPad * px);
 
-            // The slider (touch zone) keeps the whole rect width; only its height follows the tube.
+            // The handle area maps clicks to values vertically (the touch zone width is FitTouchZone's).
             handleArea.anchorMin = Vector2.zero;
             handleArea.anchorMax = Vector2.one;
             handleArea.offsetMin = new Vector2(0f, AreaBottom * px);
@@ -155,10 +164,22 @@ namespace RoguelikePool
             emberLayer.localScale = new Vector3(px, px, 1f);
         }
 
+        /// <summary>Keeps the touch zone touchWidth wide, centered on the bar, as tall as the RectTransform.</summary>
+        void FitTouchZone()
+        {
+            if (touchZone == null) return;
+            float inset = touchWidth > 0f ? (root.rect.width - touchWidth) / 2f : 0f;
+            var min = new Vector2(inset, 0f);
+            var max = new Vector2(-inset, 0f);
+            if (touchZone.offsetMin != min) touchZone.offsetMin = min;
+            if (touchZone.offsetMax != max) touchZone.offsetMax = max;
+        }
+
         void Update()
         {
             if (root == null) return;
             FitToRect();
+            FitTouchZone();
             if (texture == null) return;
             float v = Slider.value;
             float glow = Mathf.Clamp01((v - glowStart) / (1f - glowStart));
