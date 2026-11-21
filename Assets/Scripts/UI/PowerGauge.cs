@@ -25,9 +25,11 @@ namespace RoguelikePool
         public float sweepSpeed = 0.3f;
         [Tooltip("Texte du pourcentage sous la jauge (objet TextMeshPro de la scène).")]
         [SerializeField] TMP_Text percentText;
+        [Tooltip("Largeur dessinée de la barre (unités du canvas), centrée dans le RectTransform. Le RectTransform entier reste la zone cliquable / touchable. 0 = toute la largeur.")]
+        [SerializeField] float visualWidth = 52f;
 
-        // Sizes in art pixels. The RectTransform is the frame; the texture overflows it by Pad columns on
-        // each side (brass studs). The frame size follows the RectTransform (rect / PixelUI.ArtPixel).
+        // Sizes in art pixels. The frame is visualWidth wide, centered in the RectTransform (the touch zone);
+        // the texture overflows the frame by Pad columns on each side (brass studs).
         const int Pad = 3;
         int frameWidth;
         int Width => frameWidth + 2 * Pad;
@@ -43,6 +45,7 @@ namespace RoguelikePool
         int AreaHeight => AreaTop - AreaBottom + 1;
 
         RectTransform root;
+        Vector2 fittedRect;
         RawImage gaugeImage, halo;
         Texture2D texture;
         Color32[] pixels;
@@ -105,18 +108,22 @@ namespace RoguelikePool
         }
 
         /// <summary>
-        /// Follows the RectTransform (the frame): rebuilds the textures when its size in art pixels changes.
-        /// Called every frame (cheap when nothing changed), so the layout can be edited live.
+        /// Follows the RectTransform (the touch zone): rebuilds the textures when its size changes. The frame
+        /// is drawn <see cref="visualWidth"/> wide, centered, so the bar can look thin while staying easy to
+        /// touch. Called every frame (cheap when nothing changed), so the layout can be edited live.
         /// </summary>
         void FitToRect()
         {
             const int px = PixelUI.ArtPixel;
-            Vector2 size = root.rect.size / px;
-            int newWidth = Mathf.Max(10, Mathf.RoundToInt(size.x));
-            int newHeight = Mathf.Max(60, Mathf.RoundToInt(size.y));
-            if (newWidth == frameWidth && newHeight == height) return;
+            Vector2 rect = root.rect.size;
+            float drawn = visualWidth > 0f ? Mathf.Min(visualWidth, rect.x) : rect.x;
+            int newWidth = Mathf.Max(10, Mathf.RoundToInt(drawn / px));
+            int newHeight = Mathf.Max(60, Mathf.RoundToInt(rect.y / px));
+            if (newWidth == frameWidth && newHeight == height && rect == fittedRect) return;
+            fittedRect = rect;
             frameWidth = newWidth;
             height = newHeight;
+            float inset = (rect.x - frameWidth * px) / 2f; // from each side of the touch zone to the frame
 
             if (texture != null) Destroy(texture);
             texture = PixelArt.NewTexture(Width, height, "PowerGauge");
@@ -125,24 +132,25 @@ namespace RoguelikePool
             var grt = gaugeImage.rectTransform;
             grt.anchorMin = Vector2.zero;
             grt.anchorMax = Vector2.one;
-            grt.offsetMin = new Vector2(-Pad * px, 0f); // the studs overflow the frame
-            grt.offsetMax = new Vector2(Pad * px, 0f);
+            grt.offsetMin = new Vector2(inset - Pad * px, 0f); // the studs overflow the frame
+            grt.offsetMax = new Vector2(-(inset - Pad * px), 0f);
 
             if (halo.texture != null) Destroy(halo.texture);
             halo.texture = CreateHalo(frameWidth, height, HaloPad);
             var hrt = halo.rectTransform;
             hrt.anchorMin = Vector2.zero;
             hrt.anchorMax = Vector2.one;
-            hrt.offsetMin = new Vector2(-HaloPad, -HaloPad) * px;
-            hrt.offsetMax = new Vector2(HaloPad, HaloPad) * px;
+            hrt.offsetMin = new Vector2(inset - HaloPad * px, -HaloPad * px);
+            hrt.offsetMax = new Vector2(-(inset - HaloPad * px), HaloPad * px);
 
+            // The slider (touch zone) keeps the whole rect width; only its height follows the tube.
             handleArea.anchorMin = Vector2.zero;
             handleArea.anchorMax = Vector2.one;
             handleArea.offsetMin = new Vector2(0f, AreaBottom * px);
             handleArea.offsetMax = new Vector2(0f, -(height - 1 - AreaTop) * px);
 
             // Embers move in texture (art pixel) coordinates.
-            emberLayer.anchoredPosition = new Vector2(-Pad * px, 0f);
+            emberLayer.anchoredPosition = new Vector2(inset - Pad * px, 0f);
             emberLayer.sizeDelta = new Vector2(Width, height);
             emberLayer.localScale = new Vector3(px, px, 1f);
         }
