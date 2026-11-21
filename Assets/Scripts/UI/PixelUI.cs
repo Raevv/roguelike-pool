@@ -4,12 +4,15 @@ using UnityEngine.UI;
 namespace RoguelikePool
 {
     /// <summary>
-    /// Procedural pixel-art UI pieces. The shot canvas uses a constant pixel size equal to the world
-    /// pixel scale and a reference PPU of 1, so one canvas unit = one art pixel, and every sprite
-    /// here is authored 1 texel = 1 art pixel.
+    /// Procedural pixel-art UI pieces, authored 1 texel = 1 art pixel. The canvas scales with the screen
+    /// (reference 1080×1920) and one art pixel = <see cref="ArtPixel"/> canvas units, so a sprite for a
+    /// rect of W×H canvas units is generated at W/ArtPixel × H/ArtPixel texels and stretched.
     /// </summary>
     public static class PixelUI
     {
+        /// <summary>Canvas units per art pixel (at the 1080×1920 reference: 2 screen pixels, as before the layout rework).</summary>
+        public const int ArtPixel = 2;
+
         public static readonly Color32 Outline = PixelArt.Hex("07040b");
         public static readonly Color32 TextLight = PixelArt.Hex("fff0cf");
         public static readonly Color32 TextShadow = PixelArt.Hex("1a0d14");

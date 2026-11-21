@@ -26,9 +26,15 @@ namespace RoguelikePool
         [Tooltip("Texte du pourcentage sous la jauge (objet TextMeshPro de la scène).")]
         [SerializeField] TMP_Text percentText;
 
-        const int Width = 30;
-        const int FrameLeft = 3, FrameRight = 26;  // frame columns (inclusive)
-        const int TubeLeft = 6, TubeRight = 23;    // fill columns (inclusive)
+        // Sizes in art pixels. The RectTransform is the frame; the texture overflows it by Pad columns on
+        // each side (brass studs). The frame size follows the RectTransform (rect / PixelUI.ArtPixel).
+        const int Pad = 3;
+        int frameWidth;
+        int Width => frameWidth + 2 * Pad;
+        int FrameLeft => Pad;
+        int FrameRight => Pad + frameWidth - 1;    // frame columns (inclusive)
+        int TubeLeft => FrameLeft + 3;
+        int TubeRight => FrameRight - 3;           // fill columns (inclusive)
         const int AreaBottom = 3;                  // first fill row
         const int HaloPad = 12;
 
@@ -53,7 +59,6 @@ namespace RoguelikePool
         static readonly Color32 EmptyShade = PixelArt.Hex("0b0911");
         static readonly Color32 Separator = PixelArt.Hex("07040b");
         static readonly Color32[] Brass = PixelArt.Palette("3a2412", "6e4a1e", "a8742a", "d9a441", "f5d37a", "fff0b8");
-        static readonly int[] StudColumns = { FrameLeft + 1, FrameRight - 1 };
         static readonly Color[] Heat =
         {
             PixelArt.Hex("3fbf4a"), PixelArt.Hex("a6cf33"), PixelArt.Hex("f2c230"),
@@ -99,13 +104,19 @@ namespace RoguelikePool
             if (percentText != null) percentText.transform.SetAsLastSibling(); // above the runtime-built gauge layers
         }
 
-        /// <summary>Resizes the gauge (art pixels). Called when the screen / pixel scale changes.</summary>
-        public void SetHeight(int newHeight)
+        /// <summary>
+        /// Follows the RectTransform (the frame): rebuilds the textures when its size in art pixels changes.
+        /// Called every frame (cheap when nothing changed), so the layout can be edited live.
+        /// </summary>
+        void FitToRect()
         {
-            newHeight = Mathf.Max(60, newHeight);
-            if (newHeight == height) return;
+            const int px = PixelUI.ArtPixel;
+            Vector2 size = root.rect.size / px;
+            int newWidth = Mathf.Max(10, Mathf.RoundToInt(size.x));
+            int newHeight = Mathf.Max(60, Mathf.RoundToInt(size.y));
+            if (newWidth == frameWidth && newHeight == height) return;
+            frameWidth = newWidth;
             height = newHeight;
-            root.sizeDelta = new Vector2(Width, height);
 
             if (texture != null) Destroy(texture);
             texture = PixelArt.NewTexture(Width, height, "PowerGauge");
@@ -114,25 +125,32 @@ namespace RoguelikePool
             var grt = gaugeImage.rectTransform;
             grt.anchorMin = Vector2.zero;
             grt.anchorMax = Vector2.one;
-            grt.offsetMin = grt.offsetMax = Vector2.zero;
+            grt.offsetMin = new Vector2(-Pad * px, 0f); // the studs overflow the frame
+            grt.offsetMax = new Vector2(Pad * px, 0f);
 
             if (halo.texture != null) Destroy(halo.texture);
-            halo.texture = CreateHalo(FrameRight - FrameLeft + 1, height, HaloPad);
+            halo.texture = CreateHalo(frameWidth, height, HaloPad);
             var hrt = halo.rectTransform;
             hrt.anchorMin = Vector2.zero;
             hrt.anchorMax = Vector2.one;
-            hrt.offsetMin = new Vector2(FrameLeft - HaloPad, -HaloPad);
-            hrt.offsetMax = new Vector2(-(Width - 1 - FrameRight) + HaloPad, HaloPad);
+            hrt.offsetMin = new Vector2(-HaloPad, -HaloPad) * px;
+            hrt.offsetMax = new Vector2(HaloPad, HaloPad) * px;
 
             handleArea.anchorMin = Vector2.zero;
             handleArea.anchorMax = Vector2.one;
-            handleArea.offsetMin = new Vector2(FrameLeft, AreaBottom);
-            handleArea.offsetMax = new Vector2(-(Width - 1 - FrameRight), -(height - 1 - AreaTop));
+            handleArea.offsetMin = new Vector2(0f, AreaBottom * px);
+            handleArea.offsetMax = new Vector2(0f, -(height - 1 - AreaTop) * px);
+
+            // Embers move in texture (art pixel) coordinates.
+            emberLayer.anchoredPosition = new Vector2(-Pad * px, 0f);
             emberLayer.sizeDelta = new Vector2(Width, height);
+            emberLayer.localScale = new Vector3(px, px, 1f);
         }
 
         void Update()
         {
+            if (root == null) return;
+            FitToRect();
             if (texture == null) return;
             float v = Slider.value;
             float glow = Mathf.Clamp01((v - glowStart) / (1f - glowStart));
@@ -228,8 +246,9 @@ namespace RoguelikePool
                 int dSep = Mathf.Min(Mathf.Abs(y - sep1), Mathf.Min(Mathf.Abs(y - sep2), Mathf.Abs(y - sep3)));
                 if (dSep <= 3)
                 {
-                    foreach (int cx in StudColumns)
+                    for (int side = 0; side < 2; side++)
                     {
+                        int cx = side == 0 ? FrameLeft + 1 : FrameRight - 1;
                         int m = Mathf.Abs(x - cx) + dSep;
                         if (m == 3) c = PixelUI.Outline;
                         else if (m == 2) c = Brass[2];

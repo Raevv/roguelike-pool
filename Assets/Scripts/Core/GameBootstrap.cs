@@ -78,7 +78,7 @@ namespace RoguelikePool
                 Debug.LogError("GameBootstrap : aucune ShotUI dans la scène (Tools > Roguelike Pool > 8 Build UI).");
                 return;
             }
-            ui.Init(uiPanelFraction, rig);
+            ui.Init();
 
             var rules = new GameObject("TableRules").AddComponent<TableRules>();
             rules.Init(ui);

@@ -12,8 +12,8 @@ namespace RoguelikePool
     /// <summary>
     /// Pixel-art shot UI for a portrait phone screen: a slate panel on the right (thumb side) with the
     /// power gauge, a fine-aim toggle and the TIRER button at the bottom, plus a banner for short
-    /// messages over the table. The canvas uses the same integer pixel scale as the world
-    /// (<see cref="PixelCameraRig.Scale"/>), so one canvas unit = one art pixel.
+    /// messages over the table. The canvas scales with the screen (reference 1080×1920, match 0.5); one
+    /// art pixel = <see cref="PixelUI.ArtPixel"/> canvas units. Layout and anchors live in the scene (SafeArea).
     /// The whole hierarchy lives in the scene (Tools > Roguelike Pool > 8 Build UI); every text is a
     /// TextMeshPro object referenced here. Only the pixel-art backgrounds are generated at runtime.
     /// </summary>
@@ -50,10 +50,10 @@ namespace RoguelikePool
         [SerializeField] Material plainTextMaterial;
 
         [Header("Bandeau")]
-        [Tooltip("Marge horizontale totale autour du texte du bandeau (pixels art).")]
-        [SerializeField] int bannerPaddingX = 40;
-        [Tooltip("Marge verticale totale autour du texte du bandeau (pixels art).")]
-        [SerializeField] int bannerPaddingY = 16;
+        [Tooltip("Marge horizontale totale autour du texte du bandeau (unités du canvas).")]
+        [SerializeField] int bannerPaddingX = 80;
+        [Tooltip("Marge verticale totale autour du texte du bandeau (unités du canvas).")]
+        [SerializeField] int bannerPaddingY = 32;
 
         public float Power
         {
@@ -67,35 +67,25 @@ namespace RoguelikePool
         /// <summary>Screen area left of the panel (over the table), for overlays such as the stage HUD.</summary>
         public RectTransform TableArea => tableArea;
 
-        PixelCameraRig rig;
         Image fineImage;
         Sprite fineOff, fineOffPressed, fineOn, fineOnPressed;
         Color shootLabelColor, fineLabelOffColor;
         Vector2 bannerBasePosition;
         Coroutine messageRoutine;
-        int lastScale = -1, lastScreenHeight = -1;
+
         readonly List<RaycastResult> raycastResults = new List<RaycastResult>();
 
-        public void Init(float panelFraction, PixelCameraRig pixelRig)
+        public void Init()
         {
-            rig = pixelRig;
             EnsureEventSystem();
 
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
-            scaler.referencePixelsPerUnit = 1f; // sprites are 1 texel per unit
-
-            // The panel and the table area follow the camera rig's panel fraction.
-            var panel = panelImage.rectTransform;
-            panel.anchorMin = new Vector2(1f - panelFraction, 0f);
-            panel.anchorMax = Vector2.one;
-            panel.offsetMin = panel.offsetMax = Vector2.zero;
-            tableArea.anchorMin = Vector2.zero;
-            tableArea.anchorMax = new Vector2(1f - panelFraction, 1f);
-            tableArea.offsetMin = tableArea.offsetMax = Vector2.zero;
-
-            panelImage.sprite = PixelUI.Panel();
-            panelImage.type = Image.Type.Tiled;
-            panelImage.pixelsPerUnitMultiplier = 1f;
+            // The layout (Canvas Scaler, safe area, anchors) is set in the scene; only the art is generated.
+            if (panelImage != null)
+            {
+                panelImage.sprite = PixelUI.Panel();
+                panelImage.type = Image.Type.Tiled;
+                panelImage.pixelsPerUnitMultiplier = 1f / PixelUI.ArtPixel; // 1 texel = 1 art pixel
+            }
 
             ApplyFixedTexts(GameTexts.Current);
             gauge.Init(0f); // the cue starts at rest; the power comes from pulling it back
@@ -108,7 +98,6 @@ namespace RoguelikePool
             banner.gameObject.SetActive(false);
             TextShadow.Plain = plainTextMaterial;
             TextShadow.FitAll(this); // every text of the canvas, with the colors set in the scene
-            ApplyScale();
         }
 
         /// <summary>Writes the fixed texts (FORCE, TIRER, VISÉE FINE) from <see cref="GameTexts"/>.</summary>
@@ -117,21 +106,6 @@ namespace RoguelikePool
             GameTexts.Write(forceTitle, texts.powerTitle, inEditor);
             GameTexts.Write(shootLabel, texts.shootButton, inEditor);
             GameTexts.Write(fineLabel, texts.fineAimButton, inEditor);
-        }
-
-        void Update() => ApplyScale();
-
-        /// <summary>Follows the world pixel scale and resizes the gauge to the available height.</summary>
-        void ApplyScale()
-        {
-            if (scaler == null) return;
-            int k = rig != null ? rig.Scale : 1;
-            if (k == lastScale && Screen.height == lastScreenHeight) return;
-            lastScale = k;
-            lastScreenHeight = Screen.height;
-            scaler.scaleFactor = k;
-            int artHeight = Screen.height / k;
-            gauge.SetHeight(Mathf.Clamp(artHeight - 160 - 40, 80, 620));
         }
 
         public void SetCanShoot(bool canShoot)
@@ -172,18 +146,18 @@ namespace RoguelikePool
             banner.gameObject.SetActive(true);
             bannerText.text = message;
             bannerText.ForceMeshUpdate();
-            // The plate is sized around the text, in whole art pixels.
-            int w = Mathf.CeilToInt(bannerText.preferredWidth) + bannerPaddingX;
-            int h = Mathf.CeilToInt(bannerText.preferredHeight) + bannerPaddingY;
+            // The plate is sized around the text, in whole art pixels (bannerPadding is in canvas units).
+            int w = Mathf.CeilToInt((bannerText.preferredWidth + bannerPaddingX) / PixelUI.ArtPixel);
+            int h = Mathf.CeilToInt((bannerText.preferredHeight + bannerPaddingY) / PixelUI.ArtPixel);
             if (banner.texture != null) Destroy(banner.texture);
             banner.texture = PixelUI.Banner(w, h);
             var rt = banner.rectTransform;
-            rt.sizeDelta = new Vector2(w, h);
+            rt.sizeDelta = new Vector2(w, h) * PixelUI.ArtPixel;
 
             // Quick pixel "pop": drop in by a few art pixels.
             for (float t = 0f; t < 0.12f; t += Time.deltaTime)
             {
-                rt.anchoredPosition = bannerBasePosition + new Vector2(0f, Mathf.Round(Mathf.Lerp(8f, 0f, t / 0.12f)));
+                rt.anchoredPosition = bannerBasePosition + new Vector2(0f, Mathf.Round(Mathf.Lerp(8f, 0f, t / 0.12f)) * PixelUI.ArtPixel);
                 yield return null;
             }
             rt.anchoredPosition = bannerBasePosition;
@@ -247,10 +221,11 @@ namespace RoguelikePool
             });
         }
 
-        /// <summary>Size of a fixed-size UI element in whole art pixels (for the generated sprites).</summary>
+        /// <summary>Size of a UI element in whole art pixels (for the generated sprites, which are stretched over the rect).</summary>
         public static Vector2Int SizeOf(RectTransform rt)
         {
-            return new Vector2Int(Mathf.Max(8, Mathf.RoundToInt(rt.sizeDelta.x)), Mathf.Max(8, Mathf.RoundToInt(rt.sizeDelta.y)));
+            Vector2 size = rt.rect.size / PixelUI.ArtPixel;
+            return new Vector2Int(Mathf.Max(8, Mathf.RoundToInt(size.x)), Mathf.Max(8, Mathf.RoundToInt(size.y)));
         }
 
         static void EnsureEventSystem()

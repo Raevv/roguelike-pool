@@ -48,7 +48,7 @@ namespace RoguelikePool
 
             panelImage.sprite = PixelUI.Panel();
             panelImage.type = Image.Type.Tiled;
-            panelImage.pixelsPerUnitMultiplier = 1f;
+            panelImage.pixelsPerUnitMultiplier = 1f / PixelUI.ArtPixel; // 1 texel = 1 art pixel
             panelBasePosition = panelImage.rectTransform.anchoredPosition;
 
             buttonImage = (Image)button.targetGraphic;
@@ -138,7 +138,7 @@ namespace RoguelikePool
             var panel = panelImage.rectTransform;
             for (float t = 0f; t < 0.12f; t += Time.deltaTime)
             {
-                panel.anchoredPosition = panelBasePosition + new Vector2(0f, Mathf.Round(Mathf.Lerp(10f, 0f, t / 0.12f)));
+                panel.anchoredPosition = panelBasePosition + new Vector2(0f, Mathf.Round(Mathf.Lerp(10f, 0f, t / 0.12f)) * PixelUI.ArtPixel);
                 yield return null;
             }
             panel.anchoredPosition = panelBasePosition;
