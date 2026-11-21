@@ -539,15 +539,41 @@ public static class UILayoutBuilder
         return Save($"Step 10 done (URP assets with alpha output: {assets}).");
     }
 
-    // ---------------------------------------------------------------- Step 11: money follows the table
+    // ---------------------------------------------------------------- Step 11: money centered on the table axis
 
-    [MenuItem("Tools/Roguelike Pool/UI Layout/11. Money follows the table top")]
+    [MenuItem("Tools/Roguelike Pool/UI Layout/11. Money centered on the table axis")]
     public static string Step11()
     {
         var money = Object.FindAnyObjectByType<MoneyDisplay>(FindObjectsInactive.Include);
-        var fitter = Object.FindAnyObjectByType<TableFitter>(FindObjectsInactive.Include);
-        if (money == null || fitter == null) throw new System.InvalidOperationException("Run steps 2 and 3 first.");
-        Wire(money, ("tableFitter", fitter), ("tableMargin", 25f));
+        if (money == null) throw new System.InvalidOperationException("Run step 2 first.");
+        var so = new SerializedObject(money);
+        var amount = (TMP_Text)so.FindProperty("amountText").objectReferenceValue;
+        var coin = (Image)so.FindProperty("coinIcon").objectReferenceValue;
+
+        // Like the stage title and the score: hangs from the top of TopBar (the table column), centered on
+        // its axis, y 345 → 405. The amount + coin group is centered as a whole, whatever the amount's width.
+        var rt = (RectTransform)money.transform;
+        PlaceTop(rt, new Vector2(0.5f, 1f), 0f, 345f, new Vector2(rt.sizeDelta.x, 60f));
+        var layout = rt.GetComponent<HorizontalLayoutGroup>();
+        if (layout == null) layout = rt.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.spacing = 28f; // mockup: text ends at 755, coin starts at 783
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+        var fitter = rt.GetComponent<ContentSizeFitter>();
+        if (fitter == null) fitter = rt.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+        fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        amount.transform.SetSiblingIndex(0); // "999" then the coin
+        amount.alignment = TextAlignmentOptions.Center;
+        coin.transform.SetSiblingIndex(1);
+        var coinLayout = coin.GetComponent<LayoutElement>();
+        if (coinLayout == null) coinLayout = coin.gameObject.AddComponent<LayoutElement>();
+        coinLayout.preferredWidth = coinLayout.minWidth = 64f;
+        coin.rectTransform.sizeDelta = new Vector2(64f, 64f);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
         return Save("Step 11 done.");
     }
 
