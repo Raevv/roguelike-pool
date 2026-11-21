@@ -215,6 +215,108 @@ public static class UILayoutBuilder
         return Save($"Step 3 done (bootstrap wired: {bootstrap != null}, shader: {shader != null}).");
     }
 
+    // ---------------------------------------------------------------- Step 4: right column
+
+    public const string BonusSlotPrefabPath = "Assets/Prefabs/UI/BonusSlot.prefab";
+
+    [MenuItem("Tools/Roguelike Pool/UI Layout/4. Right column (bonus tabs, power bar, buttons)")]
+    public static string Step4()
+    {
+        var root = RequireRoot();
+        var content = Content(root);
+        var safe = (RectTransform)content.parent;
+        var shotUI = root.GetComponent<ShotUI>();
+        var so = new SerializedObject(shotUI);
+        var gauge = (PowerGauge)so.FindProperty("gauge").objectReferenceValue;
+        var shoot = (Button)so.FindProperty("shootButton").objectReferenceValue;
+        var fine = (Button)so.FindProperty("fineButton").objectReferenceValue;
+
+        // Power bar, TIRER and VISÉE FINE leave the slate panel, which is deleted (no background).
+        var gaugeRt = (RectTransform)gauge.transform;
+        gaugeRt.SetParent(content, false);
+        // x 931 → 1001 (70 px), y 681 → 1481: right-anchored, stretched vertically with the screen.
+        gaugeRt.anchorMin = new Vector2(1f, 0f);
+        gaugeRt.anchorMax = new Vector2(1f, 1f);
+        gaugeRt.pivot = new Vector2(1f, 0.5f);
+        gaugeRt.offsetMin = new Vector2(931f - ContentRight, ContentBottom - 1481f);
+        gaugeRt.offsetMax = new Vector2(1001f - ContentRight, -681f);
+
+        // TIRER: x 869 → 1063 in the mockup, cut at the 40 px margin (→ 1040), y 1532 → 1690.
+        var shootRt = (RectTransform)shoot.transform;
+        shootRt.SetParent(content, false);
+        PlaceBottomRight(shootRt, 869f, 1532f, ContentRight, 1690f);
+        // VISÉE FINE under TIRER: x 869 → 1040, y 1715 → 1835 (120 px touch height).
+        var fineRt = (RectTransform)fine.transform;
+        fineRt.SetParent(content, false);
+        PlaceBottomRight(fineRt, 869f, 1715f, ContentRight, 1835f);
+        foreach (var label in new[] { shoot.GetComponentInChildren<TMP_Text>(true), fine.GetComponentInChildren<TMP_Text>(true) })
+            if (label != null) label.fontSize = 38f;
+
+        var panel = content.Find("Panel");
+        if (panel != null) Object.DestroyImmediate(panel.gameObject); // with the FORCE title
+        Wire(shotUI, ("panelImage", null), ("forceTitle", null));
+
+        // Bonus tabs: on the right screen edge (safe area, no margin), x 931 → 1080, y 26 → 591.
+        var prefab = BonusSlotPrefab();
+        var tabs = Child(safe, "BonusTabs");
+        Place(tabs, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -26f), new Vector2(149f, 565f));
+        var layout = tabs.GetComponent<VerticalLayoutGroup>();
+        if (layout == null) layout = tabs.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = -30f; // 5 × 137 − 4 × 30 = 565: the slight overlap of the mockup
+        layout.childAlignment = TextAnchor.UpperRight;
+        layout.reverseArrangement = true; // first child at the bottom, the top tab drawn over the one below
+        layout.childControlWidth = layout.childControlHeight = false;
+        layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+        if (tabs.GetComponent<BonusTabs>() == null) tabs.gameObject.AddComponent<BonusTabs>();
+        for (int i = tabs.childCount - 1; i >= 0; i--) Object.DestroyImmediate(tabs.GetChild(i).gameObject);
+        for (int i = 5; i >= 1; i--) // children bottom → top
+        {
+            var slot = (GameObject)PrefabUtility.InstantiatePrefab(prefab, tabs);
+            slot.name = "BonusSlot_" + i;
+        }
+        tabs.SetAsLastSibling();
+        return Save("Step 4 done.");
+    }
+
+    /// <summary>The bonus tab prefab: touch zone + Button + BonusSlot, a purple visual that slides, a shadow.</summary>
+    static GameObject BonusSlotPrefab()
+    {
+        System.IO.Directory.CreateDirectory("Assets/Prefabs/UI");
+        var go = new GameObject("BonusSlot", typeof(RectTransform), typeof(Image), typeof(Button), typeof(BonusSlot));
+        var rt = (RectTransform)go.transform;
+        rt.sizeDelta = new Vector2(149f, 137f);
+        var hit = go.GetComponent<Image>();
+        hit.color = new Color(1f, 1f, 1f, 0f); // invisible touch zone
+        var visual = Placeholder(rt, "Placeholder_Bonus", MockPurple);
+        // Extends 30 px past the right edge so sliding left never opens a gap.
+        visual.rectTransform.anchorMin = Vector2.zero;
+        visual.rectTransform.anchorMax = Vector2.one;
+        visual.rectTransform.offsetMin = Vector2.zero;
+        visual.rectTransform.offsetMax = new Vector2(30f, 0f);
+        var shadow = Placeholder(visual.transform, "Shadow", new Color(0f, 0f, 0f, 0.45f));
+        shadow.rectTransform.anchorMin = Vector2.zero;
+        shadow.rectTransform.anchorMax = new Vector2(1f, 0f);
+        shadow.rectTransform.pivot = new Vector2(0.5f, 1f);
+        shadow.rectTransform.anchoredPosition = Vector2.zero;
+        shadow.rectTransform.sizeDelta = new Vector2(0f, 12f);
+        var button = go.GetComponent<Button>();
+        button.targetGraphic = visual;
+        button.navigation = new Navigation { mode = Navigation.Mode.None };
+        Wire(go.GetComponent<BonusSlot>(), ("visual", visual.rectTransform));
+        var prefab = PrefabUtility.SaveAsPrefabAsset(go, BonusSlotPrefabPath);
+        Object.DestroyImmediate(go);
+        return prefab;
+    }
+
+    /// <summary>Places a Content child by its mockup edges, anchored to the content's bottom-right corner.</summary>
+    static void PlaceBottomRight(RectTransform rt, float left, float top, float right, float bottom)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot = new Vector2(1f, 0f);
+        rt.anchoredPosition = new Vector2(right - ContentRight, ContentBottom - bottom);
+        rt.sizeDelta = new Vector2(right - left, bottom - top);
+    }
+
     /// <summary>Stretches a Content child so its edges sit at these mockup coordinates on 1080×1920.</summary>
     public static void StretchMock(RectTransform rt, float left, float top, float right, float bottom)
     {
