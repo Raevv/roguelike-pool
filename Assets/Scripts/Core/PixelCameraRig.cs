@@ -6,12 +6,14 @@ using UnityEngine.UI;
 namespace RoguelikePool
 {
     /// <summary>
-    /// Authentic low-resolution rendering: the world camera renders at exactly
-    /// <see cref="PixelArt.PPU"/> pixels per world unit into a small point-filtered RenderTexture,
-    /// which is shown full screen at an integer scale (<see cref="Scale"/>). Post-processing (bloom,
-    /// vignette) runs at that low resolution, so glows are pixelated too.
-    /// The scale is the largest integer that fits the whole table in the area left of the UI panel.
-    /// The camera position is snapped to the pixel grid so static art never shimmers.
+    /// Low-resolution rendering: the world camera renders at exactly <see cref="PixelArt.PPU"/> pixels
+    /// per world unit into a small RenderTexture covering the whole screen, which a full-screen RawImage
+    /// shows at <see cref="DisplayScale"/> screen pixels per art pixel. Post-processing (bloom, vignette)
+    /// runs at that low resolution, so glows are pixelated too.
+    /// The scale is set so that the fit rect (world units, e.g. the table and its margins, given by
+    /// <see cref="TableFitter"/>) fills a screen rect exactly. It is usually not an integer: the RawImage
+    /// uses the PixelUpscale shader ("sharp bilinear") so every art pixel stays a crisp, even block.
+    /// The camera position is snapped to the art pixel grid so static art never shimmers.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public class PixelCameraRig : MonoBehaviour
@@ -19,13 +21,12 @@ namespace RoguelikePool
         public static PixelCameraRig Instance { get; private set; }
 
         public PoolTable table;
-        [Range(0f, 0.4f)] public float rightPanelFraction = 0.2f;
-        [Tooltip("Marge autour de la table (unités).")]
-        public float margin = 0.5f;
         public Color screenColor = new Color(0.02f, 0.02f, 0.035f);
+        [Tooltip("Shader d'agrandissement net (Hidden/RoguelikePool/PixelUpscale).")]
+        public Shader upscaleShader;
 
-        /// <summary>Screen pixels per art pixel.</summary>
-        public int Scale { get; private set; } = 1;
+        /// <summary>Screen pixels per art pixel (not an integer in general).</summary>
+        public float DisplayScale { get; private set; } = 1f;
 
         /// <summary>Optional vignette to keep centered on the table.</summary>
         public Vignette Vignette { get; set; }
@@ -33,6 +34,9 @@ namespace RoguelikePool
         Camera cam;
         RenderTexture target;
         RawImage display;
+        Rect fitWorld, fitScreen;
+        bool hasFit;
+        Vector2 displayOrigin; // screen position of the render texture's bottom-left corner
 
         void Awake()
         {
@@ -56,35 +60,55 @@ namespace RoguelikePool
             if (target != null) target.Release();
         }
 
+        /// <summary>
+        /// Makes <paramref name="world"/> (world units) fill <paramref name="screen"/> (screen pixels,
+        /// bottom-left origin) exactly, keeping the aspect ratio (the limiting side fills, the other is centered).
+        /// </summary>
+        public void SetFit(Rect world, Rect screen)
+        {
+            fitWorld = world;
+            fitScreen = screen;
+            hasFit = world.width > 0f && world.height > 0f && screen.width > 0f && screen.height > 0f;
+            Refresh();
+        }
+
         /// <summary>Converts a screen position (pointer) to world space.</summary>
         public Vector2 ScreenToWorld(Vector2 screen)
         {
-            return cam.ScreenToWorldPoint(new Vector3(screen.x / Scale, screen.y / Scale, 0f));
+            Vector2 low = (screen - displayOrigin) / DisplayScale;
+            return cam.ScreenToWorldPoint(new Vector3(low.x, low.y, 0f));
         }
 
         /// <summary>Inverse of <see cref="ScreenToWorld"/>: world point → real screen pixels.</summary>
         public Vector2 WorldToScreen(Vector2 world)
         {
             Vector3 low = cam.WorldToScreenPoint(world); // pixels of the low-res target
-            return new Vector2(low.x, low.y) * Scale;
+            return displayOrigin + new Vector2(low.x, low.y) * DisplayScale;
         }
 
         void LateUpdate() => Refresh();
 
         public void Refresh()
         {
-            if (table == null) return;
             int sw = Screen.width, sh = Screen.height;
             if (sw <= 0 || sh <= 0) return;
             int ppu = PixelArt.PPU;
+            EnsureUpscaleMaterial();
 
-            Rect b = table.OuterBounds;
-            b.position += (Vector2)table.transform.position;
-            float needW = (b.width + 2f * margin) * ppu;
-            float needH = (b.height + 2f * margin) * ppu;
-            int k = Mathf.Max(1, Mathf.FloorToInt(Mathf.Min(sw * (1f - rightPanelFraction) / needW, sh / needH)));
-            int w = Mathf.CeilToInt(sw / (float)k);
-            int h = Mathf.CeilToInt(sh / (float)k);
+            // Without a fit rect (no TableFitter): the table's frame fills the whole screen.
+            Rect world = fitWorld, screen = fitScreen;
+            if (!hasFit)
+            {
+                if (table == null) return;
+                world = table.OuterBounds;
+                world.position += (Vector2)table.transform.position;
+                screen = new Rect(0f, 0f, sw, sh);
+            }
+
+            float unitsToScreen = Mathf.Min(screen.width / world.width, screen.height / world.height);
+            float k = Mathf.Max(0.25f, unitsToScreen / ppu); // screen pixels per art pixel
+            int w = Mathf.CeilToInt(sw / k) + 2;
+            int h = Mathf.CeilToInt(sh / k) + 2;
 
             if (target == null || target.width != w || target.height != h)
             {
@@ -92,7 +116,7 @@ namespace RoguelikePool
                 target = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32)
                 {
                     name = "PixelTarget",
-                    filterMode = FilterMode.Point,
+                    filterMode = FilterMode.Bilinear, // the upscale shader keeps the pixels crisp
                     antiAliasing = 1,
                     useMipMap = false
                 };
@@ -100,22 +124,36 @@ namespace RoguelikePool
                 cam.targetTexture = target;
                 display.texture = target;
             }
-            Scale = k;
-            display.rectTransform.sizeDelta = new Vector2(w * k, h * k);
+            DisplayScale = k;
             cam.orthographicSize = h / (2f * ppu);
 
-            // Center the table in the visible area left of the panel (the target may overflow the
-            // screen by less than one art pixel at the top/right).
-            float leftArea = sw * (1f - rightPanelFraction) / k;
-            float visibleH = sh / (float)k;
-            float cx = b.center.x + (w / 2f - leftArea / 2f) / ppu;
-            float cy = b.center.y + (h / 2f - visibleH / 2f) / ppu;
-            cx = (Mathf.Round(cx * ppu - w / 2f) + w / 2f) / ppu;
-            cy = (Mathf.Round(cy * ppu - h / 2f) + h / 2f) / ppu;
+            // Camera on the fit center, snapped so world-grid art lands on whole texels.
+            Vector2 c = world.center;
+            float cx = (Mathf.Round(c.x * ppu - w / 2f) + w / 2f) / ppu;
+            float cy = (Mathf.Round(c.y * ppu - h / 2f) + h / 2f) / ppu;
             transform.position = new Vector3(cx, cy, -10f);
 
+            // Place the texture so the fit center lands on the screen rect center.
+            Vector2 centerTexel = new Vector2((c.x - cx) * ppu + w / 2f, (c.y - cy) * ppu + h / 2f);
+            displayOrigin = screen.center - centerTexel * k;
+            var rt = display.rectTransform;
+            rt.anchoredPosition = displayOrigin;
+            rt.sizeDelta = new Vector2(w * k, h * k);
+
             if (Vignette != null)
-                Vignette.center.Override(new Vector2(leftArea / 2f / w, visibleH / 2f / h));
+                Vignette.center.Override(new Vector2(centerTexel.x / w, centerTexel.y / h));
+        }
+
+        bool materialChecked;
+
+        /// <summary>Puts the sharp-bilinear material on the display (once; the shader is set by GameBootstrap).</summary>
+        void EnsureUpscaleMaterial()
+        {
+            if (materialChecked) return;
+            materialChecked = true;
+            if (upscaleShader == null) upscaleShader = Shader.Find("Hidden/RoguelikePool/PixelUpscale");
+            if (upscaleShader != null) display.material = new Material(upscaleShader) { name = "PixelUpscale" };
+            else Debug.LogWarning("PixelCameraRig : shader PixelUpscale introuvable, agrandissement bilinéaire simple.");
         }
 
         void CreateScreenCamera()
@@ -139,7 +177,7 @@ namespace RoguelikePool
             var canvas = canvasGo.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = -100;
-            canvas.pixelPerfect = true;
+            canvas.pixelPerfect = false; // the texture sits on fractional positions
             canvasGo.GetComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
 
             var go = new GameObject("World", typeof(RectTransform), typeof(RawImage));

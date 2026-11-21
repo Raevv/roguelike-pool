@@ -11,8 +11,6 @@ namespace RoguelikePool
     [DefaultExecutionOrder(-1000)] // before the table and cue placed in the scene, so BallPhysicsSettings.Current is set first
     public class GameBootstrap : MonoBehaviour
     {
-        [Tooltip("Part de la largeur d'écran occupée par le panneau de droite.")]
-        [Range(0f, 0.4f)] public float uiPanelFraction = 0.2f;
         public Color backgroundColor = new Color(0.02f, 0.02f, 0.035f);
         [Tooltip("Liste ordonnée des stages de la partie (Assets/Data/StageCatalog).")]
         public StageCatalog stageCatalog;
@@ -28,6 +26,10 @@ namespace RoguelikePool
         public StageScreens stageScreens;
         [Tooltip("Tous les textes du jeu : titres, phrases, boutons, formats (Assets/Data/GameTexts).")]
         public GameTexts gameTexts;
+        [Tooltip("Zone de l'UI où la table doit tenir (TableAnchor, avec son TableFitter).")]
+        public TableFitter tableFitter;
+        [Tooltip("Shader d'agrandissement net du rendu basse résolution (Assets/Art/Shaders/PixelUpscale).")]
+        public Shader pixelUpscaleShader;
 
         void Awake()
         {
@@ -59,7 +61,7 @@ namespace RoguelikePool
             var rig = cam.GetComponent<PixelCameraRig>();
             if (rig == null) rig = cam.gameObject.AddComponent<PixelCameraRig>();
             rig.table = table;
-            rig.rightPanelFraction = uiPanelFraction;
+            rig.upscaleShader = pixelUpscaleShader;
             PixelCameraRig.CreatePostProcessing(out var vignette);
             rig.Vignette = vignette;
             rig.Refresh();
@@ -79,6 +81,12 @@ namespace RoguelikePool
                 return;
             }
             ui.Init();
+
+            // The camera frames the table inside the UI's TableAnchor (needs the canvas layout computed).
+            var fitter = tableFitter != null ? tableFitter : FindAnyObjectByType<TableFitter>(FindObjectsInactive.Include);
+            Canvas.ForceUpdateCanvases();
+            if (fitter != null) fitter.Init(table, rig);
+            else Debug.LogWarning("GameBootstrap : aucun TableFitter dans l'UI, la table remplit l'écran.");
 
             var rules = new GameObject("TableRules").AddComponent<TableRules>();
             rules.Init(ui);

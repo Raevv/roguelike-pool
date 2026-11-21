@@ -187,6 +187,44 @@ public static class UILayoutBuilder
         return Save("Step 2 done.");
     }
 
+    // ---------------------------------------------------------------- Step 3: TableAnchor + camera
+
+    [MenuItem("Tools/Roguelike Pool/UI Layout/3. TableAnchor + TableFitter (camera)")]
+    public static string Step3()
+    {
+        var root = RequireRoot();
+        var content = Content(root);
+
+        // TableAnchor: mockup x 41 → 847, y 430 → 1693, stretched with the content area so it grows on
+        // taller screens (the right column and the top/bottom rows keep their size).
+        var anchor = Child(content, "TableAnchor");
+        StretchMock(anchor, 41f, 430f, 847f, 1693f);
+        var fitter = anchor.GetComponent<TableFitter>();
+        if (fitter == null) fitter = anchor.gameObject.AddComponent<TableFitter>();
+        var table = Object.FindAnyObjectByType<PoolTable>();
+        if (table != null) Wire(fitter, ("table", table));
+        anchor.SetSiblingIndex(0);
+
+        // The message banner (scratch) is centered on the table: TableArea follows the anchor.
+        var tableArea = content.Find("TableArea") as RectTransform;
+        if (tableArea != null) StretchMock(tableArea, 41f, 430f, 847f, 1693f);
+
+        var bootstrap = Object.FindAnyObjectByType<GameBootstrap>();
+        var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Art/Shaders/PixelUpscale.shader");
+        if (bootstrap != null) Wire(bootstrap, ("tableFitter", fitter), ("pixelUpscaleShader", shader));
+        return Save($"Step 3 done (bootstrap wired: {bootstrap != null}, shader: {shader != null}).");
+    }
+
+    /// <summary>Stretches a Content child so its edges sit at these mockup coordinates on 1080×1920.</summary>
+    public static void StretchMock(RectTransform rt, float left, float top, float right, float bottom)
+    {
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.offsetMin = new Vector2(left - Side, ContentBottom - bottom);
+        rt.offsetMax = new Vector2(right - ContentRight, -top);
+    }
+
     // ---------------------------------------------------------------- helpers
 
     static RectTransform Content(GameObject root)

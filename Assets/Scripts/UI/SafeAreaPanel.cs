@@ -30,9 +30,16 @@ namespace RoguelikePool
         Vector2Int lastScreen;
         Vector4 lastMargins;
 
-        void OnEnable() => Apply(true);
-        void OnValidate() => Apply(true);
-        void Update() => Apply(false);
+        bool dirty = true;
+
+        void OnEnable() => dirty = true;
+        // RectTransforms must not be changed inside OnEnable/OnValidate during loads (SendMessage warnings): apply on the next Update.
+        void OnValidate() => dirty = true;
+        void Update()
+        {
+            Apply(dirty);
+            dirty = false;
+        }
 
         void Apply(bool force)
         {
