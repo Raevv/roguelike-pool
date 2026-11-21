@@ -327,19 +327,20 @@ public static class UILayoutBuilder
             Wire(hud, ("shotsValue", null));
         }
 
-        // Row: spans the table column (mockup x 41 → 847, so centered on the table axis), y 1746 → 1810,
-        // anchored to the bottom of the content area.
+        // Spans the table column (mockup x 41 → 847, so centered on the table axis) and the space between the
+        // table and the bottom margin (y 1700 → 1840): one row of 64 px icons (mockup y 1746 → 1810, here
+        // centered at 1770), or two rows 12 px apart. Anchored to the bottom of the content area.
         var row = Child(content, "ShotsCounter");
         row.anchorMin = new Vector2(0f, 0f);
         row.anchorMax = new Vector2(1f, 0f);
         row.pivot = new Vector2(0.5f, 0f);
-        row.offsetMin = new Vector2(41f - Side, ContentBottom - 1810f);
-        row.offsetMax = new Vector2(847f - ContentRight, ContentBottom - 1746f);
+        row.offsetMin = new Vector2(41f - Side, ContentBottom - 1840f);
+        row.offsetMax = new Vector2(847f - ContentRight, ContentBottom - 1700f);
         var counter = row.GetComponent<ShotsCounter>();
         if (counter == null) counter = row.gameObject.AddComponent<ShotsCounter>();
 
         var prefab = ShotIconPrefab();
-        Wire(counter, ("iconPrefab", prefab.GetComponent<ShotIcon>()), ("maxIconSize", 64f), ("spacing", 40f));
+        Wire(counter, ("iconPrefab", prefab.GetComponent<ShotIcon>()), ("maxIconSize", 64f), ("spacing", 40f), ("maxPerRow", 5), ("rowSpacing", 12f));
         for (int i = row.childCount - 1; i >= 0; i--) Object.DestroyImmediate(row.GetChild(i).gameObject);
         for (int i = 0; i < 4; i++) // preview, as in the mockup; rebuilt at runtime from the stage's shots
         {

@@ -4,10 +4,10 @@ using UnityEngine;
 namespace RoguelikePool
 {
     /// <summary>
-    /// Row of shot icons under the table, centered on the table axis: one <see cref="ShotIcon"/> per shot
+    /// Shot icons under the table, centered on the table axis, in rows of at most maxPerRow (5): one <see cref="ShotIcon"/> per shot
     /// of the stage (<see cref="StageManager.MaxShots"/>), greyed once used. Icons are
     /// <see cref="maxIconSize"/> wide with <see cref="spacing"/> between them; when they do not fit in
-    /// the row's width, icons and spacing shrink together. The icons placed in the scene are only a
+    /// the rect (width or height), icons and spacings shrink together. The icons placed in the scene are only a
     /// preview: at runtime the row is rebuilt from the prefab with the stage's shot count.
     /// Refreshed on <see cref="StageManager.Changed"/>.
     /// </summary>
@@ -20,6 +20,10 @@ namespace RoguelikePool
         [SerializeField] float maxIconSize = 64f;
         [Tooltip("Espace entre deux icônes à la taille maximale (réduit dans la même proportion que les icônes).")]
         [SerializeField] float spacing = 40f;
+        [Tooltip("Nombre maximum d'icônes par ligne ; au-delà, une nouvelle ligne commence (chaque ligne est centrée).")]
+        [SerializeField] int maxPerRow = 5;
+        [Tooltip("Espace vertical entre deux lignes à la taille maximale (réduit dans la même proportion que les icônes).")]
+        [SerializeField] float rowSpacing = 12f;
         [Tooltip("Les tirs utilisés se grisent depuis la gauche (sinon depuis la droite).")]
         [SerializeField] bool greyFromLeft = false;
 
@@ -58,7 +62,10 @@ namespace RoguelikePool
             Arrange();
         }
 
-        /// <summary>Lays the active icons out, centered, shrinking them if the row is too narrow.</summary>
+        /// <summary>
+        /// Lays the active icons out in centered rows of at most <see cref="maxPerRow"/> (the last row is
+        /// centered too), the block centered in the rect, shrinking icons and gaps if it does not fit.
+        /// </summary>
         [ContextMenu("Arranger les icônes")]
         public void Arrange()
         {
@@ -69,16 +76,31 @@ namespace RoguelikePool
             int n = active.Count;
             if (n == 0) return;
 
+            int perRow = Mathf.Max(1, maxPerRow);
+            int columns = Mathf.Min(n, perRow);
+            int rows = (n + perRow - 1) / perRow;
             float ratio = maxIconSize > 0f ? spacing / maxIconSize : 0f;
-            float size = Mathf.Min(maxIconSize, rt.rect.width / (n + (n - 1) * ratio));
-            float gap = size * ratio;
-            float x = -(n * size + (n - 1) * gap) / 2f + size / 2f;
-            foreach (var icon in active)
+            float rowRatio = maxIconSize > 0f ? rowSpacing / maxIconSize : 0f;
+            float size = Mathf.Min(maxIconSize,
+                rt.rect.width / (columns + (columns - 1) * ratio),
+                rt.rect.height / (rows + (rows - 1) * rowRatio));
+            float gap = size * ratio, rowGap = size * rowRatio;
+
+            float y = (rows * size + (rows - 1) * rowGap) / 2f - size / 2f; // first row on top
+            for (int row = 0; row < rows; row++)
             {
-                icon.anchorMin = icon.anchorMax = icon.pivot = new Vector2(0.5f, 0.5f);
-                icon.sizeDelta = new Vector2(size, size);
-                icon.anchoredPosition = new Vector2(x, 0f);
-                x += size + gap;
+                int first = row * perRow;
+                int count = Mathf.Min(perRow, n - first);
+                float x = -(count * size + (count - 1) * gap) / 2f + size / 2f;
+                for (int i = first; i < first + count; i++)
+                {
+                    var icon = active[i];
+                    icon.anchorMin = icon.anchorMax = icon.pivot = new Vector2(0.5f, 0.5f);
+                    icon.sizeDelta = new Vector2(size, size);
+                    icon.anchoredPosition = new Vector2(x, y);
+                    x += size + gap;
+                }
+                y -= size + rowGap;
             }
         }
 
