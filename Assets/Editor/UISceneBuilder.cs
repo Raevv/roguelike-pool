@@ -14,6 +14,8 @@ using UnityEngine.UI;
 /// One canvas unit = one art pixel (the runtime sets the canvas scale factor to the pixel scale), so
 /// the positions below are in art pixels, for the 540×960 reference screen.
 /// Run once; afterwards tune everything by hand in the scene (rebuilding wipes those edits).
+/// OUTDATED since the ui-layout branch: it builds the old 540×960 layout. The current layout comes from
+/// running it once, then Tools > Roguelike Pool > UI Layout > 1 → 6 (UILayoutBuilder), in order.
 /// </summary>
 public static class UISceneBuilder
 {
@@ -32,7 +34,7 @@ public static class UISceneBuilder
     static void BuildMenu()
     {
         if (GameObject.Find(RootName) != null &&
-            !EditorUtility.DisplayDialog("Build UI", "Un objet \"UI\" existe déjà dans la scène. Le supprimer et le reconstruire ? Les réglages faits à la main dessus seront perdus.", "Reconstruire", "Annuler"))
+            !EditorUtility.DisplayDialog("Build UI", "Un objet \"UI\" existe déjà dans la scène. Le supprimer et le reconstruire ? Les réglages faits à la main dessus seront perdus, et ce menu reconstruit l'ANCIENNE mise en page : il faudra relancer UI Layout 1 à 6.", "Reconstruire", "Annuler"))
             return;
         Build(true);
     }

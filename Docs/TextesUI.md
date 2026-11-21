@@ -17,25 +17,30 @@ Depuis la branche `ui-text`, chaque texte est un objet **TextMeshPro - Text (UI)
   Les textes dont la couleur est trop proche de celle de l'ombre (texte noir sur bouton doré)
   passent automatiquement sur `VeniceClassic SDF NoShadow.mat`, sans ombre (`TextShadow`, seuil
   d'écart de luminosité 0.25).
-  Tailles nettes : multiples de 19 (19, 38, 57).
+  Tailles nettes : multiples de 19 (38, 57, 76, 95, 133 ; le canvas est en 1080×1920, 1 pixel d'art = 2 unités).
   Glyphes absents de VeniceClassic (affichés en LiberationSans) : `@ Â È Ê Ë Î Ï Ô Ù Û …`.
 
 | Texte | Mots (GameTexts) | Objet TMP (Hierarchy) |
 |-------|------------------|-----------------------|
-| FORCE | Libellés fixes › Power Title | `UI/Panel/ForceTitle` |
-| 50 % | Formats › Power Format `{0}%` | `UI/Panel/PowerGauge/PercentText` |
-| VISÉE FINE | Boutons › Fine Aim Button | `UI/Panel/FineAimButton/Label` |
-| TIRER / ... | Boutons › Shoot Button, Shoot Button Busy | `UI/Panel/ShootButton/Label` |
-| Blanche empochée | Messages › Scratch Message | `UI/TableArea/Banner/Text` (objet inactif) |
-| STAGE, SCORE, TIRS | Libellés fixes › Hud Stage/Score/Shots Label | `UI/TableArea/StageHUD/StageLabel`, `ScoreLabel`, `ShotsLabel` |
-| 1/6, 0/100, 5/5 | Formats › Hud Stage/Score/Shots Format | `UI/TableArea/StageHUD/StageValue`, `ScoreValue`, `ShotsValue` |
-| Titre de fin | Titres › Victory Titles, Run Won Titles, Defeat Titles (un au hasard) | `UI/TableArea/StageScreens/Veil/Panel/Title` |
+| 50 % | Formats › Power Format `{0}%` | `UI/SafeArea/Content/PowerGauge/PercentText` |
+| VISÉE FINE | Boutons › Fine Aim Button | `UI/SafeArea/Content/FineAimButton/Label` |
+| TIRER / ... | Boutons › Shoot Button, Shoot Button Busy | `UI/SafeArea/Content/ShootButton/Label` |
+| Blanche empochée | Messages › Scratch Message | `UI/SafeArea/Content/TableArea/Banner/Text` (objet inactif) |
+| Stage 1 | Formats › Hud Stage Format `Stage {0}` | `UI/SafeArea/Content/TopBar/StageTitle` |
+| 0 / 100 | Formats › Hud Score Format `{0} / {1}` | `UI/SafeArea/Content/TopBar/ScoreObjective` |
+| 999 (argent) | Formats › Money Format `{0}` | `UI/SafeArea/Content/TopBar/Money/MoneyText` |
+| Menu des paramètres | Menu des paramètres › Settings Title, Options/Restart/Quit/Close Button | `UI/Overlays/SettingsPanel/Placeholder_SettingsMenu/…` (objet inactif) |
+| Titre de fin | Titres › Victory Titles, Run Won Titles, Defeat Titles (un au hasard) | `UI/Overlays/StageScreens/Veil/Panel/Title` |
 | Ligne 1 | Formats › Stage Won Line 1, Run Won Line 1, Defeat Line 1 | `…/Veil/Panel/Line1` |
 | Ligne 2 | Formats › Stage Won Line 2 (+ One Shot), Run Won Line 2, Defeat Line 2 | `…/Veil/Panel/Line2` |
 | STAGE SUIVANT / RECOMMENCER | Boutons › Next Stage Button, Retry Button, New Run Button | `…/Veil/Panel/Button/Label` |
 
-`Veil` (écrans de fin) et `Banner` sont inactifs dans la scène : coche-les pour les voir en mode
-édition, puis décoche-les (le jeu les cache de toute façon au lancement).
+Les tirs restants ne sont plus un texte : ce sont les icônes de `UI/SafeArea/Content/ShotsCounter`.
+Les anciens libellés STAGE / SCORE / TIRS (`TopBar/StageLabel`, `ScoreLabel`, `ShotsLabel`) et le
+titre FORCE n'existent plus ou sont désactivés.
+
+`Veil` (écrans de fin), `SettingsPanel` et `Banner` sont inactifs dans la scène : coche-les pour les
+voir en mode édition, puis décoche-les (le jeu les cache de toute façon au lancement).
 
 Formats : `{0}`, `{1}`, `{2}` sont remplacés par les valeurs indiquées dans l'info-bulle de chaque
 champ. Une accolade seule s'écrit `{{` ou `}}`. Un format invalide s'affiche tel quel, avec un
