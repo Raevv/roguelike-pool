@@ -17,6 +17,20 @@ namespace RoguelikePool
         [Tooltip("Rotation ajoutée au sprite pour que sa pointe regarde dans la direction du tir (sprite vertical, pointe en haut : -90).")]
         public float spriteRotationOffset = -90f;
 
+        SpriteRenderer stickRenderer;
+
+        /// <summary>Length of the drawn cue in world units, tip to butt (from the stick sprite).</summary>
+        public float Length
+        {
+            get
+            {
+                if (stickRenderer == null && stick != null) stickRenderer = stick.GetComponentInChildren<SpriteRenderer>();
+                if (stickRenderer == null || stickRenderer.sprite == null) return 0f;
+                var s = stickRenderer.sprite;
+                return s.rect.height / s.pixelsPerUnit * stickRenderer.transform.lossyScale.y;
+            }
+        }
+
         /// <summary>Places the cue: root on the ball, pointing along <paramref name="direction"/>, tip <paramref name="tipDistance"/> behind the ball center.</summary>
         public void Pose(Vector2 ballCenter, Vector2 direction, float tipDistance)
         {

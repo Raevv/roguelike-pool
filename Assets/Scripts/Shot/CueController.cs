@@ -5,8 +5,10 @@ using UnityEngine.InputSystem;
 namespace RoguelikePool
 {
     /// <summary>
-    /// Aiming and power with the cue. Press anywhere on the table and drag: the finger motion is split
-    /// along the cue axis. Motion across the cue turns it at a fixed sensitivity (degrees per screen height):
+    /// Aiming and power with the cue. Press on the table and drag: the finger motion is split along the
+    /// cue axis. Only a drag that starts on the cue itself (within cueTouchMargin of its axis) can change
+    /// the power; a drag started anywhere else only aims, and presses outside the screen are ignored.
+    /// Motion across the cue turns it at a fixed sensitivity (degrees per screen height):
     /// a drag that starts behind the cue ball (on the cue side) moves the cue itself (drag left → the butt
     /// goes left → the shot aims right), a drag that starts in front of it moves the aim point instead
     /// (drag left → aim left). Motion along the cue pulls it back (away from the shot
@@ -49,6 +51,8 @@ namespace RoguelikePool
         public bool lockDragAxis = true;
         [Tooltip("Distance (fraction de hauteur d'écran) au-delà de laquelle le glissé choisit son axe.")]
         public float axisLockDistance = 0.015f;
+        [Tooltip("Pour régler la puissance, le glissé doit commencer sur la queue : distance max entre le doigt et l'axe de la queue (pixels d'écran à 1080×1920, proportionnel ailleurs). Ailleurs, le glissé ne fait que viser.")]
+        public float cueTouchMargin = 70f;
 
         [Header("Canne (visuel)")]
         public float tipGap = 0.15f;
@@ -68,6 +72,7 @@ namespace RoguelikePool
         Vector2 pressScreen;
         float pressTime;
         bool tapCandidate;
+        bool dragOnCue;
         enum DragAxis { Undecided, Aim, Power }
         DragAxis dragAxis;
         float aimSign = 1f;      // +1: the drag moves the cue (pressed behind the ball), -1: it moves the aim point (in front)
@@ -127,11 +132,15 @@ namespace RoguelikePool
             if (pointer == null) return;
             Vector2 screen = pointer.position.ReadValue();
 
-            if (pointer.press.wasPressedThisFrame && !ui.IsOverUI(screen))
+            // Presses outside the game screen (e.g. Editor toolbars of the Game view) are ignored.
+            if (pointer.press.wasPressedThisFrame && OnScreen(screen) && !ui.IsOverUI(screen))
             {
                 aiming = true;
-                tapCandidate = true;
-                dragAxis = lockDragAxis ? DragAxis.Undecided : DragAxis.Aim;
+                // Only a drag that starts on the cue (within cueTouchMargin of its axis) can set the power;
+                // anywhere else the drag only aims. A tap on the cue does not aim at it.
+                dragOnCue = IsOnCue(screen);
+                tapCandidate = !dragOnCue;
+                dragAxis = dragOnCue && lockDragAxis ? DragAxis.Undecided : DragAxis.Aim;
                 // Pressed in front of the cue ball (shot side): the drag moves the aim point, so the
                 // rotation is reversed compared with a drag from behind, which moves the cue itself.
                 Vector2 fromBall = screen - WorldToScreen(cueBall.Body.position);
@@ -189,7 +198,7 @@ namespace RoguelikePool
         void ApplyDrag(Vector2 delta, Vector2 back, Vector2 side, float screenHeight)
         {
             if (delta.sqrMagnitude <= 0f) return;
-            bool both = !lockDragAxis;
+            bool both = !lockDragAxis && dragOnCue; // power only from a drag that started on the cue
             if (both || dragAxis == DragAxis.Aim)
             {
                 float degPerPixel = aimDegreesPerScreenHeight / screenHeight * (FineAim ? fineAimFactor : 1f);
@@ -200,6 +209,22 @@ namespace RoguelikePool
                 float powerPerPixel = powerPerScreenHeight / screenHeight * (FineAim ? finePowerFactor : 1f);
                 ui.Power += Vector2.Dot(delta, back) * powerPerPixel;
             }
+        }
+
+        static bool OnScreen(Vector2 p) => p.x >= 0f && p.y >= 0f && p.x < Screen.width && p.y < Screen.height;
+
+        /// <summary>True if the screen point is within <see cref="cueTouchMargin"/> of the drawn cue (tip → butt).</summary>
+        bool IsOnCue(Vector2 screen)
+        {
+            if (cue == null || !cue.gameObject.activeInHierarchy || cue.stick == null) return false;
+            Vector2 dir = new Vector2(Mathf.Cos(aimAngle), Mathf.Sin(aimAngle));
+            Vector2 tip = cue.stick.position;
+            Vector2 butt = tip - dir * cue.Length;
+            Vector2 a = WorldToScreen(tip), b = WorldToScreen(butt);
+            Vector2 ab = b - a;
+            float t = ab.sqrMagnitude > 0f ? Mathf.Clamp01(Vector2.Dot(screen - a, ab) / ab.sqrMagnitude) : 0f;
+            float margin = cueTouchMargin * Screen.height / 1920f;
+            return (screen - (a + ab * t)).sqrMagnitude <= margin * margin;
         }
 
         /// <summary>Eases the displayed angle toward the input angle (frame-rate independent).</summary>
