@@ -308,6 +308,66 @@ public static class UILayoutBuilder
         return prefab;
     }
 
+    // ---------------------------------------------------------------- Step 5: shots counter
+
+    public const string ShotIconPrefabPath = "Assets/Prefabs/UI/ShotIcon.prefab";
+
+    [MenuItem("Tools/Roguelike Pool/UI Layout/5. Shots counter")]
+    public static string Step5()
+    {
+        var root = RequireRoot();
+        var content = Content(root);
+
+        // The old shots text (kept below the table since step 2) is replaced by the icons.
+        var hud = Object.FindAnyObjectByType<StageHUD>(FindObjectsInactive.Include);
+        if (hud != null)
+        {
+            var shotsText = (TMP_Text)new SerializedObject(hud).FindProperty("shotsValue").objectReferenceValue;
+            if (shotsText != null) Object.DestroyImmediate(shotsText.gameObject);
+            Wire(hud, ("shotsValue", null));
+        }
+
+        // Row: spans the table column (mockup x 41 → 847, so centered on the table axis), y 1746 → 1810,
+        // anchored to the bottom of the content area.
+        var row = Child(content, "ShotsCounter");
+        row.anchorMin = new Vector2(0f, 0f);
+        row.anchorMax = new Vector2(1f, 0f);
+        row.pivot = new Vector2(0.5f, 0f);
+        row.offsetMin = new Vector2(41f - Side, ContentBottom - 1810f);
+        row.offsetMax = new Vector2(847f - ContentRight, ContentBottom - 1746f);
+        var counter = row.GetComponent<ShotsCounter>();
+        if (counter == null) counter = row.gameObject.AddComponent<ShotsCounter>();
+
+        var prefab = ShotIconPrefab();
+        Wire(counter, ("iconPrefab", prefab.GetComponent<ShotIcon>()), ("maxIconSize", 64f), ("spacing", 40f));
+        for (int i = row.childCount - 1; i >= 0; i--) Object.DestroyImmediate(row.GetChild(i).gameObject);
+        for (int i = 0; i < 4; i++) // preview, as in the mockup; rebuilt at runtime from the stage's shots
+        {
+            var icon = (GameObject)PrefabUtility.InstantiatePrefab(prefab, row);
+            icon.name = "ShotIcon_" + (i + 1);
+        }
+        counter.Arrange();
+
+        var bootstrap = Object.FindAnyObjectByType<GameBootstrap>();
+        if (bootstrap != null) Wire(bootstrap, ("shotsCounter", counter));
+        return Save("Step 5 done.");
+    }
+
+    /// <summary>The shot icon prefab: ShotIcon on the root, a blue placeholder Image (later the sprite).</summary>
+    static GameObject ShotIconPrefab()
+    {
+        System.IO.Directory.CreateDirectory("Assets/Prefabs/UI");
+        var go = new GameObject("ShotIcon", typeof(RectTransform), typeof(ShotIcon));
+        ((RectTransform)go.transform).sizeDelta = new Vector2(64f, 64f);
+        var image = Placeholder(go.transform, "Placeholder_Shot", MockBlue);
+        Stretch(image.rectTransform);
+        var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Art/Shaders/UISaturation.shader");
+        Wire(go.GetComponent<ShotIcon>(), ("image", image), ("saturationShader", shader));
+        var prefab = PrefabUtility.SaveAsPrefabAsset(go, ShotIconPrefabPath);
+        Object.DestroyImmediate(go);
+        return prefab;
+    }
+
     /// <summary>Places a Content child by its mockup edges, anchored to the content's bottom-right corner.</summary>
     static void PlaceBottomRight(RectTransform rt, float left, float top, float right, float bottom)
     {

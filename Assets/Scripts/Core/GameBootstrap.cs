@@ -24,6 +24,7 @@ namespace RoguelikePool
         public ShotUI shotUI;
         public StageHUD stageHUD;
         public StageScreens stageScreens;
+        public ShotsCounter shotsCounter;
         [Tooltip("Tous les textes du jeu : titres, phrases, boutons, formats (Assets/Data/GameTexts).")]
         public GameTexts gameTexts;
         [Tooltip("Zone de l'UI où la table doit tenir (TableAnchor, avec son TableFitter).")]
@@ -101,6 +102,9 @@ namespace RoguelikePool
                 else Debug.LogError("GameBootstrap : aucun StageHUD dans la scène.");
                 if (screens != null) screens.Init(ui, stages);
                 else Debug.LogError("GameBootstrap : aucun StageScreens dans la scène.");
+                var counter = shotsCounter != null ? shotsCounter : FindAnyObjectByType<ShotsCounter>(FindObjectsInactive.Include);
+                if (counter != null) counter.Init(stages);
+                else Debug.LogWarning("GameBootstrap : aucun ShotsCounter dans la scène.");
             }
             else
                 Debug.LogError("GameBootstrap : StageCatalog manquant, vide ou avec un stage vide : pas de boucle de stages.");
