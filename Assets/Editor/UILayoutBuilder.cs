@@ -241,14 +241,14 @@ public static class UILayoutBuilder
         gaugeRt.offsetMin = new Vector2(931f - ContentRight, ContentBottom - 1481f);
         gaugeRt.offsetMax = new Vector2(1001f - ContentRight, -681f);
 
-        // TIRER: x 869 → 1063 in the mockup, cut at the 40 px margin (→ 1040), y 1532 → 1690.
+        // TIRER: centered on the power bar (x 966) and inside the 40 px margin → x 892 → 1040, y 1532 → 1690.
         var shootRt = (RectTransform)shoot.transform;
         shootRt.SetParent(content, false);
-        PlaceBottomRight(shootRt, 869f, 1532f, ContentRight, 1690f);
-        // VISÉE FINE under TIRER: x 869 → 1040, y 1715 → 1835 (120 px touch height).
+        PlaceBottomRight(shootRt, 892f, 1532f, ContentRight, 1690f);
+        // VISÉE FINE under TIRER, same column: x 892 → 1040, y 1715 → 1835 (120 px touch height).
         var fineRt = (RectTransform)fine.transform;
         fineRt.SetParent(content, false);
-        PlaceBottomRight(fineRt, 869f, 1715f, ContentRight, 1835f);
+        PlaceBottomRight(fineRt, 892f, 1715f, ContentRight, 1835f);
         foreach (var label in new[] { shoot.GetComponentInChildren<TMP_Text>(true), fine.GetComponentInChildren<TMP_Text>(true) })
             if (label != null) label.fontSize = 38f;
 
@@ -462,6 +462,32 @@ public static class UILayoutBuilder
         if (layout == null) layout = tabs.gameObject.AddComponent<RightColumnLayout>();
         Wire(layout, ("powerBar", gauge.transform), ("topMargin", 26f), ("topMarginTall", 110f), ("gapBelowTabs", 90f));
         return Save("Step 7 done.");
+    }
+
+    // ---------------------------------------------------------------- Step 8: buttons centered on the bar
+
+    [MenuItem("Tools/Roguelike Pool/UI Layout/8. Center TIRER and VISÉE FINE on the power bar")]
+    public static string Step8()
+    {
+        var root = RequireRoot();
+        var so = new SerializedObject(root.GetComponent<ShotUI>());
+        var bar = (RectTransform)((PowerGauge)so.FindProperty("gauge").objectReferenceValue).transform;
+        // Bar center, measured from the content's right edge (both are right-anchored, so it holds on any format).
+        float center = (bar.offsetMin.x + bar.offsetMax.x) / 2f;
+        float maxWidth = -2f * center; // as wide as possible without crossing the right margin
+        var sb = new System.Text.StringBuilder("Step 8 done:");
+        foreach (var field in new[] { "shootButton", "fineButton" })
+        {
+            var rt = (RectTransform)((Button)so.FindProperty(field).objectReferenceValue).transform;
+            float width = Mathf.Min(rt.sizeDelta.x, maxWidth);
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 0f);
+            float y = rt.anchoredPosition.y - rt.sizeDelta.y * rt.pivot.y; // keep the bottom edge
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(center, y);
+            rt.sizeDelta = new Vector2(width, rt.sizeDelta.y);
+            sb.Append($" {rt.name} center {center} width {width};");
+        }
+        return Save(sb.ToString());
     }
 
     /// <summary>Places a Content child by its mockup edges, anchored to the content's bottom-right corner.</summary>
