@@ -539,6 +539,18 @@ public static class UILayoutBuilder
         return Save($"Step 10 done (URP assets with alpha output: {assets}).");
     }
 
+    // ---------------------------------------------------------------- Step 11: money follows the table
+
+    [MenuItem("Tools/Roguelike Pool/UI Layout/11. Money follows the table top")]
+    public static string Step11()
+    {
+        var money = Object.FindAnyObjectByType<MoneyDisplay>(FindObjectsInactive.Include);
+        var fitter = Object.FindAnyObjectByType<TableFitter>(FindObjectsInactive.Include);
+        if (money == null || fitter == null) throw new System.InvalidOperationException("Run steps 2 and 3 first.");
+        Wire(money, ("tableFitter", fitter), ("tableMargin", 25f));
+        return Save("Step 11 done.");
+    }
+
     /// <summary>Places a Content child by its mockup edges, anchored to the content's bottom-right corner.</summary>
     static void PlaceBottomRight(RectTransform rt, float left, float top, float right, float bottom)
     {
