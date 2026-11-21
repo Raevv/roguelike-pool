@@ -41,6 +41,13 @@ namespace RoguelikePool
         public string hudScoreLabel = "SCORE";
         public string hudShotsLabel = "TIRS";
 
+        [Header("Menu des paramètres")]
+        public string settingsTitle = "MENU";
+        public string settingsOptionsButton = "Paramètres";
+        public string settingsRestartButton = "Recommencer la partie";
+        public string settingsQuitButton = "Quitter";
+        public string settingsCloseButton = "Fermer";
+
         [Header("Messages")]
         [Tooltip("Bandeau quand la blanche tombe : le tir est annulé.")]
         public string scratchMessage = "Blanche empochée : tir annulé";
@@ -48,10 +55,12 @@ namespace RoguelikePool
         [Header("Formats : {0}, {1}, {2} sont remplacés par les valeurs")]
         [Tooltip("Sous la jauge. {0} = puissance en %.")]
         public string powerFormat = "{0}%";
-        [Tooltip("HUD, colonne STAGE. {0} = stage actuel, {1} = nombre de stages.")]
-        public string hudStageFormat = "{0}/{1}";
-        [Tooltip("HUD, colonne SCORE. {0} = score, {1} = objectif.")]
-        public string hudScoreFormat = "{0}/{1}";
+        [Tooltip("Titre du stage au-dessus de la table. {0} = stage actuel, {1} = nombre de stages.")]
+        public string hudStageFormat = "Stage {0}";
+        [Tooltip("Score et objectif au-dessus de la table. {0} = score, {1} = objectif.")]
+        public string hudScoreFormat = "{0} / {1}";
+        [Tooltip("Argent à côté de la pièce (dollars). {0} = montant.")]
+        public string moneyFormat = "{0}";
         [Tooltip("HUD, colonne TIRS. {0} = tirs restants, {1} = tirs max.")]
         public string hudShotsFormat = "{0}/{1}";
         [Tooltip("Victoire, ligne 1. {0} = n° du stage.")]

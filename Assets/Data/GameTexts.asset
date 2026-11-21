@@ -36,10 +36,16 @@ MonoBehaviour:
   hudStageLabel: STAGE
   hudScoreLabel: SCORE
   hudShotsLabel: TIRS
+  settingsTitle: MENU
+  settingsOptionsButton: "Param\xE8tres"
+  settingsRestartButton: Recommencer la partie
+  settingsQuitButton: Quitter
+  settingsCloseButton: Fermer
   scratchMessage: "Blanche empoch\xE9e : tir annul\xE9"
   powerFormat: '{0}%'
-  hudStageFormat: '{0}/{1}'
-  hudScoreFormat: '{0}/{1}'
+  hudStageFormat: Stage {0}
+  hudScoreFormat: '{0} / {1}'
+  moneyFormat: '{0}'
   hudShotsFormat: '{0}/{1}'
   stageWonLine1: "STAGE {0} R\xC9USSI"
   stageWonLine2: SCORE {0}/{1} - {2} TIRS RESTANTS

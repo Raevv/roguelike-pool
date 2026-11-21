@@ -5,16 +5,17 @@ using UnityEngine.UI;
 namespace RoguelikePool
 {
     /// <summary>
-    /// Stage HUD at the top of the table area: one pixel-art plate (same style as the message banner)
-    /// with three columns, STAGE n/N, SCORE s/target and TIRS left/max. The six texts are TextMeshPro
-    /// objects of the scene; the plate is drawn at the size of its RectTransform.
+    /// Stage HUD above the table: the stage title ("Stage n") and the score / target line. The texts are
+    /// TextMeshPro objects of the scene. Optional leftovers of the old plate layout: the plate (drawn at
+    /// the size of its RectTransform when enabled), the column labels and the shots text (left empty
+    /// once the ShotsCounter icons replace it).
     /// Values are refreshed only when <see cref="StageManager.Changed"/> fires.
     /// The score turns green once the target is reached; the shots turn red on the last shot.
     /// </summary>
     public class StageHUD : MonoBehaviour
     {
         [Header("Objets de la scène")]
-        [Tooltip("Fond de la plaque (dessiné à la taille de son RectTransform).")]
+        [Tooltip("Fond de la plaque (dessiné à la taille de son RectTransform). Facultatif : vide ou désactivé = pas de plaque.")]
         [SerializeField] RawImage plate;
         [SerializeField] TMP_Text stageLabel;
         [SerializeField] TMP_Text stageValue;
@@ -42,10 +43,10 @@ namespace RoguelikePool
         public void Init(StageManager stageManager)
         {
             manager = stageManager;
-            plate.raycastTarget = false; // never blocks aiming
+            if (plate != null) plate.raycastTarget = false; // never blocks aiming
             foreach (var text in GetComponentsInChildren<TMP_Text>(true)) text.raycastTarget = false;
             ApplyFixedTexts(GameTexts.Current);
-            DrawPlate();
+            if (plate != null && plate.enabled) DrawPlate();
             manager.Changed += Redraw;
             Redraw();
         }
@@ -72,10 +73,11 @@ namespace RoguelikePool
             stageValue.color = stageColor;
             scoreValue.text = GameTexts.Format(texts.hudScoreFormat, manager.Score, manager.Target);
             scoreValue.color = manager.Score >= manager.Target ? scoreReachedColor : scoreColor;
-            shotsValue.text = GameTexts.Format(texts.hudShotsFormat, shots, manager.MaxShots);
-            shotsValue.color = shots <= 1 ? shotsDangerColor : shotsColor;
             TextShadow.Fit(stageValue);
             TextShadow.Fit(scoreValue);
+            if (shotsValue == null) return; // replaced by the ShotsCounter icons
+            shotsValue.text = GameTexts.Format(texts.hudShotsFormat, shots, manager.MaxShots);
+            shotsValue.color = shots <= 1 ? shotsDangerColor : shotsColor;
             TextShadow.Fit(shotsValue);
         }
 
