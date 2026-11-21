@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: Stage2
   m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.StageData
   targetScore: 2
-  maxShots: 50
+  maxShots: 6
