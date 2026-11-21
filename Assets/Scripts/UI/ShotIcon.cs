@@ -6,8 +6,8 @@ namespace RoguelikePool
     /// <summary>
     /// One icon of the <see cref="ShotsCounter"/> (prefab Assets/Prefabs/UI/ShotIcon). A shot already
     /// taken is greyed by setting the image's saturation to <see cref="usedSaturation"/> (0 = grayscale)
-    /// with the UI/RoguelikePool/Saturation shader, so the same code works on the blue placeholder now
-    /// and on the final sprite later (put the sprite on the Image and set its color to white).
+    /// with the UI/RoguelikePool/Saturation shader. The Image shows the chalk sprite
+    /// (Assets/Art/Sprites/pool_clay.png, white tint, aspect preserved); any other sprite works the same.
     /// </summary>
     public class ShotIcon : MonoBehaviour
     {

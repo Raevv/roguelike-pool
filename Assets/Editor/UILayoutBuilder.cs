@@ -356,13 +356,35 @@ public static class UILayoutBuilder
         return Save("Step 5 done.");
     }
 
+    public const string ShotSpritePath = "Assets/Art/Sprites/pool_clay.png";
+
+    /// <summary>Imports the chalk sprite for UI use: 256 px shown at 64, so mipmaps + bilinear, uncompressed.</summary>
+    static Sprite ImportShotSprite()
+    {
+        var importer = AssetImporter.GetAtPath(ShotSpritePath) as TextureImporter;
+        if (importer == null) return null;
+        importer.textureType = TextureImporterType.Sprite;
+        importer.spriteImportMode = SpriteImportMode.Single;
+        importer.alphaIsTransparency = true;
+        importer.mipmapEnabled = true; // clean 4x downscale in the UI
+        importer.filterMode = FilterMode.Bilinear;
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        importer.wrapMode = TextureWrapMode.Clamp;
+        importer.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(ShotSpritePath);
+    }
+
     /// <summary>The shot icon prefab: ShotIcon on the root, a blue placeholder Image (later the sprite).</summary>
     static GameObject ShotIconPrefab()
     {
         System.IO.Directory.CreateDirectory("Assets/Prefabs/UI");
         var go = new GameObject("ShotIcon", typeof(RectTransform), typeof(ShotIcon));
         ((RectTransform)go.transform).sizeDelta = new Vector2(64f, 64f);
-        var image = Placeholder(go.transform, "Placeholder_Shot", MockBlue);
+        // The user's chalk sprite (Assets/Art/Sprites/pool_clay.png) if present, else the blue placeholder.
+        var sprite = ImportShotSprite();
+        var image = sprite != null ? Placeholder(go.transform, "Icon", Color.white) : Placeholder(go.transform, "Placeholder_Shot", MockBlue);
+        image.sprite = sprite;
+        image.preserveAspect = true;
         Stretch(image.rectTransform);
         var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Art/Shaders/UISaturation.shader");
         Wire(go.GetComponent<ShotIcon>(), ("image", image), ("saturationShader", shader));
