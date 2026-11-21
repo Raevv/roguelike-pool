@@ -393,6 +393,62 @@ public static class UILayoutBuilder
         return prefab;
     }
 
+    // ---------------------------------------------------------------- Step 6: overlays
+
+    [MenuItem("Tools/Roguelike Pool/UI Layout/6. Overlays (end screens) + touch zones")]
+    public static string Step6()
+    {
+        var root = RequireRoot();
+        var overlays = Child(root.transform, "Overlays");
+        Stretch(overlays);
+        overlays.SetAsLastSibling();
+
+        // End screens (victory / run won / defeat share one panel, StageScreens picks the texts): full
+        // screen, outside the safe area, so the semi-transparent veil covers everything; panel centered.
+        var screens = Object.FindAnyObjectByType<StageScreens>(FindObjectsInactive.Include);
+        if (screens == null) throw new System.InvalidOperationException("No StageScreens in the scene.");
+        var screensRt = (RectTransform)screens.transform;
+        screensRt.SetParent(overlays, false);
+        Stretch(screensRt);
+        screensRt.SetAsFirstSibling(); // the settings menu stays above it
+        var so = new SerializedObject(screens);
+        var veil = (GameObject)so.FindProperty("veil").objectReferenceValue;
+        var panel = (Image)so.FindProperty("panelImage").objectReferenceValue;
+        Stretch((RectTransform)veil.transform);
+        var veilImage = veil.GetComponent<Image>();
+        veilImage.color = new Color(0.01f, 0.01f, 0.03f, 0.6f);
+        veilImage.raycastTarget = true; // blocks aiming while shown
+        Place(panel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, null);
+        veil.SetActive(false);
+
+        // Every button gets a touch zone of at least 120 × 120 without changing its visual.
+        int added = 0;
+        foreach (var button in root.GetComponentsInChildren<Button>(true))
+            if (EnsureTouchZone(button)) added++;
+        return Save($"Step 6 done ({added} touch zones added).");
+    }
+
+    /// <summary>
+    /// Adds an invisible "TouchZone" child (raycast Image) of at least MinTouch on each side, centered on
+    /// a button smaller than that; its pointer events bubble up to the Button. Returns true if added.
+    /// </summary>
+    static bool EnsureTouchZone(Button button)
+    {
+        var rt = (RectTransform)button.transform;
+        Vector2 size = rt.rect.size;
+        if (size.x >= MinTouch && size.y >= MinTouch) return false;
+        var zone = Child(rt, "TouchZone");
+        zone.anchorMin = zone.anchorMax = zone.pivot = new Vector2(0.5f, 0.5f);
+        zone.anchoredPosition = Vector2.zero;
+        zone.sizeDelta = new Vector2(Mathf.Max(MinTouch, size.x), Mathf.Max(MinTouch, size.y));
+        zone.SetAsFirstSibling();
+        var img = zone.GetComponent<Image>();
+        if (img == null) img = zone.gameObject.AddComponent<Image>();
+        img.color = new Color(1f, 1f, 1f, 0f);
+        img.raycastTarget = true;
+        return true;
+    }
+
     /// <summary>Places a Content child by its mockup edges, anchored to the content's bottom-right corner.</summary>
     static void PlaceBottomRight(RectTransform rt, float left, float top, float right, float bottom)
     {

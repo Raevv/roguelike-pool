@@ -7,8 +7,9 @@ using UnityEngine.UI;
 namespace RoguelikePool
 {
     /// <summary>
-    /// End-of-stage screens over the table area: a dark veil (it also blocks aiming, since
-    /// <see cref="ShotUI.IsOverUI"/> sees it) and a slate panel with a title, two lines and one button.
+    /// End-of-stage screens, a full-screen overlay (UI/Overlays): a semi-transparent veil (it also blocks aiming, since
+    /// <see cref="ShotUI.IsOverUI"/> sees it) and a centered slate panel with a title, two lines and one button
+    /// (inactive until a stage ends).
     /// - Stage won: "VICTOIRE !" + STAGE SUIVANT → <see cref="StageManager.NextStage"/>.
     /// - Last stage won: "BRAVO !" / PARTIE GAGNÉE + RECOMMENCER → <see cref="StageManager.RestartRun"/>.
     /// - Stage lost: "DÉFAITE" + RECOMMENCER → <see cref="StageManager.RestartRun"/>.
