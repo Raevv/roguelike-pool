@@ -11,7 +11,8 @@ namespace RoguelikePool
     /// rising through it, a bright leading edge), split by ornate separators with brass studs at 25,
     /// 50 and 75 %. The fill heats from green to red as the value rises; near the maximum the gauge
     /// glows (pulsing halo, hot fill) and throws pixel embers. No dithering: crisp pixels, smooth color.
-    /// Interaction is a regular uGUI <see cref="Slider"/> laid over the tube.
+    /// Interaction is a regular uGUI <see cref="Slider"/> laid over the tube. The power can also be set by
+    /// pulling the cue back (<see cref="CueController"/>): both work, the player chooses.
     /// </summary>
     public class PowerGauge : MonoBehaviour
     {

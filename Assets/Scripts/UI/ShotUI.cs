@@ -98,7 +98,7 @@ namespace RoguelikePool
             panelImage.pixelsPerUnitMultiplier = 1f;
 
             ApplyFixedTexts(GameTexts.Current);
-            gauge.Init(0.5f);
+            gauge.Init(0f); // the cue starts at rest; the power comes from pulling it back
             SetupShootButton();
             SetupFineAimButton();
 

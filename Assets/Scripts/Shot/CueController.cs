@@ -5,13 +5,19 @@ using UnityEngine.InputSystem;
 namespace RoguelikePool
 {
     /// <summary>
-    /// Aiming and shooting. Aim is relative: press anywhere on the table and drag around the cue ball;
-    /// only the finger motion tangent to the cue ball turns the cue, at a fixed sensitivity (degrees per
-    /// screen height), so precision no longer depends on how close the finger is to the ball. A quick
-    /// tap (no drag) points the shot at the tapped spot. Fine aim (Shift, or the VISÉE FINE toggle)
-    /// divides the sensitivity. The displayed/shot angle eases toward the input angle over a few
-    /// milliseconds so integer pointer steps never show as notches.
-    /// Power comes from <see cref="ShotUI"/>; the shot is fired with the TIRER button (or Space).
+    /// Aiming and power with the cue. Press anywhere on the table and drag: the finger motion is split
+    /// along the cue axis. Motion across the cue turns it at a fixed sensitivity (degrees per screen height):
+    /// a drag that starts behind the cue ball (on the cue side) moves the cue itself (drag left → the butt
+    /// goes left → the shot aims right), a drag that starts in front of it moves the aim point instead
+    /// (drag left → aim left). Motion along the cue pulls it back (away from the shot
+    /// direction: more power) or pushes it toward the ball (less power), at a fixed rate (power per
+    /// screen height). With <see cref="lockDragAxis"/>, the first pixels of each drag decide whether it
+    /// aims or sets the power, so aiming never changes the power by accident. A quick tap (no drag)
+    /// points the shot at the tapped spot. Fine aim (Shift, or the VISÉE FINE toggle) divides both
+    /// sensitivities. The displayed/shot angle eases toward the input angle over a few milliseconds so
+    /// integer pointer steps never show as notches.
+    /// The power gauge (<see cref="ShotUI"/>) shows the power and can also set it directly; the shot is fired with the TIRER
+    /// button (or Space).
     /// Shooting is only possible when every ball has stopped and no cancelled shot is being rewound.
     /// A table snapshot is taken right before each shot.
     /// </summary>
@@ -34,6 +40,16 @@ namespace RoguelikePool
         [Tooltip("Rotation aux flèches gauche/droite (°/s). Multipliée par le facteur de visée fine.")]
         public float keyboardAimSpeed = 30f;
 
+        [Header("Puissance (reculer la queue)")]
+        [Tooltip("Puissance gagnée en reculant la queue de toute la hauteur de l'écran (2.5 = 0 → 100 % sur 40 % de l'écran).")]
+        public float powerPerScreenHeight = 2.5f;
+        [Tooltip("Multiplicateur de la vitesse de réglage de la puissance en visée fine.")]
+        public float finePowerFactor = 0.25f;
+        [Tooltip("Chaque glissé fait soit viser, soit régler la puissance, selon sa direction au départ.")]
+        public bool lockDragAxis = true;
+        [Tooltip("Distance (fraction de hauteur d'écran) au-delà de laquelle le glissé choisit son axe.")]
+        public float axisLockDistance = 0.015f;
+
         [Header("Canne (visuel)")]
         public float tipGap = 0.15f;
         public float maxPullBack = 2.4f;
@@ -52,6 +68,9 @@ namespace RoguelikePool
         Vector2 pressScreen;
         float pressTime;
         bool tapCandidate;
+        enum DragAxis { Undecided, Aim, Power }
+        DragAxis dragAxis;
+        float aimSign = 1f;      // +1: the drag moves the cue (pressed behind the ball), -1: it moves the aim point (in front)
         bool aiming;
         bool striking;
 
@@ -112,6 +131,11 @@ namespace RoguelikePool
             {
                 aiming = true;
                 tapCandidate = true;
+                dragAxis = lockDragAxis ? DragAxis.Undecided : DragAxis.Aim;
+                // Pressed in front of the cue ball (shot side): the drag moves the aim point, so the
+                // rotation is reversed compared with a drag from behind, which moves the cue itself.
+                Vector2 fromBall = screen - WorldToScreen(cueBall.Body.position);
+                aimSign = Vector2.Dot(fromBall, new Vector2(Mathf.Cos(targetAngle), Mathf.Sin(targetAngle))) > 0f ? -1f : 1f;
                 pressScreen = lastPointerScreen = screen;
                 pressTime = Time.unscaledTime;
             }
@@ -119,19 +143,29 @@ namespace RoguelikePool
 
             if (pointer.press.isPressed)
             {
-                if ((screen - pressScreen).magnitude > tapMoveTolerance * Screen.height) tapCandidate = false;
+                float screenHeight = Mathf.Max(1, Screen.height);
+                Vector2 fromPress = screen - pressScreen;
+                if (fromPress.magnitude > tapMoveTolerance * screenHeight) tapCandidate = false;
 
-                // Rotation from the finger motion tangent to the cue ball, at a constant sensitivity.
-                Vector2 ballScreen = WorldToScreen(cueBall.Body.position);
-                Vector2 radial = lastPointerScreen - ballScreen;
-                Vector2 delta = screen - lastPointerScreen;
-                if (radial.sqrMagnitude > 1f && delta.sqrMagnitude > 0f)
+                // Cue axis on screen (the world is rendered with a uniform scale, so directions match).
+                Vector2 back = new Vector2(-Mathf.Cos(targetAngle), -Mathf.Sin(targetAngle)); // toward the cue butt
+                Vector2 side = new Vector2(-back.y, back.x);                                   // butt moving this way turns the aim counter-clockwise
+
+                if (dragAxis == DragAxis.Undecided)
                 {
-                    float tangential = (radial.x * delta.y - radial.y * delta.x) / radial.magnitude; // px, + = counter-clockwise
-                    float degPerPixel = aimDegreesPerScreenHeight / Mathf.Max(1, Screen.height) * (FineAim ? fineAimFactor : 1f);
-                    targetAngle += tangential * degPerPixel * Mathf.Deg2Rad;
+                    // Wait until the drag is long enough, then keep the dominant axis for the whole drag.
+                    if (fromPress.magnitude > axisLockDistance * screenHeight)
+                    {
+                        dragAxis = Mathf.Abs(Vector2.Dot(fromPress, back)) > Mathf.Abs(Vector2.Dot(fromPress, side))
+                            ? DragAxis.Power : DragAxis.Aim;
+                        ApplyDrag(fromPress, back, side, screenHeight); // the lock distance itself counts
+                    }
                 }
-                lastPointerScreen = screen;
+                else
+                {
+                    ApplyDrag(screen - lastPointerScreen, back, side, screenHeight);
+                }
+                if (dragAxis != DragAxis.Undecided) lastPointerScreen = screen;
             }
 
             if (pointer.press.wasReleasedThisFrame)
@@ -144,6 +178,27 @@ namespace RoguelikePool
                         targetAngle = aimAngle + Mathf.DeltaAngle(aimAngle * Mathf.Rad2Deg, Mathf.Atan2(toTap.y, toTap.x) * Mathf.Rad2Deg) * Mathf.Deg2Rad;
                 }
                 aiming = false;
+            }
+        }
+
+        /// <summary>
+        /// Applies a pointer motion (screen pixels) to the cue: the part across the cue turns it, the part
+        /// along it pulls it back (more power) or pushes it in (less). With the axis lock only the drag's
+        /// chosen axis is used.
+        /// </summary>
+        void ApplyDrag(Vector2 delta, Vector2 back, Vector2 side, float screenHeight)
+        {
+            if (delta.sqrMagnitude <= 0f) return;
+            bool both = !lockDragAxis;
+            if (both || dragAxis == DragAxis.Aim)
+            {
+                float degPerPixel = aimDegreesPerScreenHeight / screenHeight * (FineAim ? fineAimFactor : 1f);
+                targetAngle += aimSign * Vector2.Dot(delta, side) * degPerPixel * Mathf.Deg2Rad;
+            }
+            if (both || dragAxis == DragAxis.Power)
+            {
+                float powerPerPixel = powerPerScreenHeight / screenHeight * (FineAim ? finePowerFactor : 1f);
+                ui.Power += Vector2.Dot(delta, back) * powerPerPixel;
             }
         }
 
@@ -191,7 +246,9 @@ namespace RoguelikePool
             if (!CanShoot || ui.Power < 0.005f) return;
             aimAngle = targetAngle; // shoot exactly where the input points, even mid-ease
             rules.TakeSnapshot();
-            StartCoroutine(StrikeRoutine(AimDirection, ui.Power));
+            float power = ui.Power;
+            ui.Power = 0f; // every shot starts with the cue at rest
+            StartCoroutine(StrikeRoutine(AimDirection, power));
         }
 
         IEnumerator StrikeRoutine(Vector2 direction, float power)
