@@ -449,6 +449,21 @@ public static class UILayoutBuilder
         return true;
     }
 
+    // ---------------------------------------------------------------- Step 7: tall screens
+
+    [MenuItem("Tools/Roguelike Pool/UI Layout/7. Tall screens (bonus tabs lower, shorter power bar)")]
+    public static string Step7()
+    {
+        var root = RequireRoot();
+        var tabs = root.transform.Find("SafeArea/BonusTabs");
+        var gauge = Object.FindAnyObjectByType<PowerGauge>(FindObjectsInactive.Include);
+        if (tabs == null || gauge == null) throw new System.InvalidOperationException("Run steps 1-4 first.");
+        var layout = tabs.GetComponent<RightColumnLayout>();
+        if (layout == null) layout = tabs.gameObject.AddComponent<RightColumnLayout>();
+        Wire(layout, ("powerBar", gauge.transform), ("topMargin", 26f), ("topMarginTall", 110f), ("gapBelowTabs", 90f));
+        return Save("Step 7 done.");
+    }
+
     /// <summary>Places a Content child by its mockup edges, anchored to the content's bottom-right corner.</summary>
     static void PlaceBottomRight(RectTransform rt, float left, float top, float right, float bottom)
     {
