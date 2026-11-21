@@ -127,9 +127,9 @@ public static class UILayoutBuilder
         Place(amount.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-92f, 0f), new Vector2(300f, 60f));
         Wire(moneyDisplay, ("amountText", amount), ("coinIcon", coin));
 
-        // Settings button: 100×100 grey square, top left (mockup x 12 → pushed to the 40 px margin, y 18).
+        // Settings button: 100×100 grey square, top left: 40 from the left (the side margin) and 40 from the top.
         var settings = TouchButton(content, "SettingsButton", "Placeholder_Settings", MockGrey, new Vector2(100f, 100f));
-        Place(settings.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0.5f, 0.5f), new Vector2(50f, -68f), null);
+        Place(settings.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0.5f, 0.5f), new Vector2(50f, -90f), null);
 
         // Settings panel: full-screen overlay (outside the safe area so the veil covers everything).
         var overlays = Child(root.transform, "Overlays");
@@ -579,6 +579,21 @@ public static class UILayoutBuilder
         Wire(money, ("tableFitter", Object.FindAnyObjectByType<TableFitter>(FindObjectsInactive.Include)), ("tableMargin", 25f));
         LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
         return Save("Step 11 done.");
+    }
+
+    // ---------------------------------------------------------------- Step 12: settings button margins
+
+    [MenuItem("Tools/Roguelike Pool/UI Layout/12. Settings button: same margin at the top as on the left")]
+    public static string Step12()
+    {
+        var menu = Object.FindAnyObjectByType<SettingsMenu>(FindObjectsInactive.Include);
+        if (menu == null) throw new System.InvalidOperationException("Run step 2 first.");
+        var rt = (RectTransform)menu.transform; // 120 touch zone, centered on the 100×100 visual
+        var visual = rt.Find("Placeholder_Settings") as RectTransform;
+        float half = visual != null ? visual.sizeDelta.y / 2f : 50f;
+        // Visual left edge = Content's left edge (40 from the screen side) → its top edge 40 from the top.
+        rt.anchoredPosition = new Vector2(half, -(Side + half));
+        return Save($"Step 12 done (visual top at {Side}).");
     }
 
     /// <summary>Places a Content child by its mockup edges, anchored to the content's bottom-right corner.</summary>
