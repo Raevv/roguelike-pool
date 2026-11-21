@@ -575,6 +575,8 @@ public static class UILayoutBuilder
         if (coinLayout == null) coinLayout = coin.gameObject.AddComponent<LayoutElement>();
         coinLayout.preferredWidth = coinLayout.minWidth = 64f;
         coin.rectTransform.sizeDelta = new Vector2(64f, 64f);
+        // At runtime MoneyDisplay keeps it anchored to the drawn table (axis, 25 above its top edge).
+        Wire(money, ("tableFitter", Object.FindAnyObjectByType<TableFitter>(FindObjectsInactive.Include)), ("tableMargin", 25f));
         LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
         return Save("Step 11 done.");
     }

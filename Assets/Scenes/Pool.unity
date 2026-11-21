@@ -1786,10 +1786,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1232113363}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 108.64, y: -30}
-  m_SizeDelta: {x: 108.64, y: 60}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 60}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &532432446
 MonoBehaviour:
@@ -2081,7 +2081,7 @@ MonoBehaviour:
   marginRight: 0
   marginTop: 0
   marginBottom: 0
-  verticalAlignment: 0.9
+  verticalAlignment: 0.405
   horizontalAlignment: 0.5
   gizmoColor: {r: 0.1, g: 1, b: 0.4, a: 0.9}
 --- !u!1 &604128426
@@ -2255,8 +2255,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -39, y: -203.00006}
-  m_SizeDelta: {x: 70, y: -1124.0001}
+  m_AnchoredPosition: {x: -39, y: -239.00006}
+  m_SizeDelta: {x: 70, y: -1196.0001}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &615230760
 MonoBehaviour:
@@ -4245,10 +4245,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1232113363}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 200.64, y: -30}
-  m_SizeDelta: {x: 64, y: 64}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 64}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &1165714711
 MonoBehaviour:
@@ -4425,7 +4425,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 0, y: -345}
-  m_SizeDelta: {x: 200.64, y: 60}
+  m_SizeDelta: {x: 0, y: 60}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1232113364
 MonoBehaviour:
@@ -4441,6 +4441,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.MoneyDisplay
   amountText: {fileID: 532432446}
   coinIcon: {fileID: 1165714711}
+  tableFitter: {fileID: 570352013}
+  tableMargin: 25
 --- !u!223 &1232113365
 Canvas:
   m_ObjectHideFlags: 0
