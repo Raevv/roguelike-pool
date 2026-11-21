@@ -331,16 +331,18 @@ public static class UILayoutBuilder
         // table and the bottom margin (y 1700 → 1840): one row of 64 px icons (mockup y 1746 → 1810, here
         // centered at 1770), or two rows 12 px apart. Anchored to the bottom of the content area.
         var row = Child(content, "ShotsCounter");
-        row.anchorMin = new Vector2(0f, 0f);
-        row.anchorMax = new Vector2(1f, 0f);
-        row.pivot = new Vector2(0.5f, 0f);
-        row.offsetMin = new Vector2(41f - Side, ContentBottom - 1840f);
-        row.offsetMax = new Vector2(847f - ContentRight, ContentBottom - 1700f);
+        // At runtime ShotsCounter follows the drawn table (its top tableMargin below the table's bottom edge);
+        // in the scene it sits where that gives on 1080×1920: table x 41 → 847, bottom 1693, + 53 → top 1746.
+        row.anchorMin = row.anchorMax = Vector2.zero;
+        row.pivot = new Vector2(0.5f, 1f);
+        row.anchoredPosition = new Vector2((41f + 847f) / 2f - Side, ContentBottom - 1746f);
+        row.sizeDelta = new Vector2(847f - 41f, 140f); // room for two rows of 64 px, 12 px apart
         var counter = row.GetComponent<ShotsCounter>();
         if (counter == null) counter = row.gameObject.AddComponent<ShotsCounter>();
 
         var prefab = ShotIconPrefab();
-        Wire(counter, ("iconPrefab", prefab.GetComponent<ShotIcon>()), ("maxIconSize", 64f), ("spacing", 40f), ("maxPerRow", 5), ("rowSpacing", 12f));
+        Wire(counter, ("iconPrefab", prefab.GetComponent<ShotIcon>()), ("maxIconSize", 64f), ("spacing", 40f), ("maxPerRow", 5), ("rowSpacing", 12f),
+             ("tableFitter", Object.FindAnyObjectByType<TableFitter>(FindObjectsInactive.Include)), ("tableMargin", 53f));
         for (int i = row.childCount - 1; i >= 0; i--) Object.DestroyImmediate(row.GetChild(i).gameObject);
         for (int i = 0; i < 4; i++) // preview, as in the mockup; rebuilt at runtime from the stage's shots
         {

@@ -27,6 +27,12 @@ namespace RoguelikePool
         [Tooltip("Les tirs utilisés se grisent depuis la gauche (sinon depuis la droite).")]
         [SerializeField] bool greyFromLeft = false;
 
+        [Header("Position sous la table")]
+        [Tooltip("Zone de la table (TableAnchor) : le compteur suit le bord bas réel de la table.")]
+        [SerializeField] TableFitter tableFitter;
+        [Tooltip("Espace entre le bas de la table et le haut de la première ligne (unités du canvas).")]
+        [SerializeField] float tableMargin = 53f;
+
         readonly List<ShotIcon> icons = new List<ShotIcon>();
         StageManager manager;
 
@@ -64,7 +70,7 @@ namespace RoguelikePool
 
         /// <summary>
         /// Lays the active icons out in centered rows of at most <see cref="maxPerRow"/> (the last row is
-        /// centered too), the block centered in the rect, shrinking icons and gaps if it does not fit.
+        /// centered too), from the top of the rect down, shrinking icons and gaps if they do not fit.
         /// </summary>
         [ContextMenu("Arranger les icônes")]
         public void Arrange()
@@ -86,7 +92,7 @@ namespace RoguelikePool
                 rt.rect.height / (rows + (rows - 1) * rowRatio));
             float gap = size * ratio, rowGap = size * rowRatio;
 
-            float y = (rows * size + (rows - 1) * rowGap) / 2f - size / 2f; // first row on top
+            float y = rt.rect.height / 2f - size / 2f; // first row against the top of the rect (near the table)
             for (int row = 0; row < rows; row++)
             {
                 int first = row * perRow;
@@ -110,9 +116,37 @@ namespace RoguelikePool
 
         void LateUpdate()
         {
+            FollowTable();
             if (!arrangePending) return;
             arrangePending = false;
             Arrange();
+        }
+
+        static readonly Vector3[] parentCorners = new Vector3[4];
+
+        /// <summary>
+        /// Keeps the rect just under the table as it is really drawn (any screen format, any TableFitter
+        /// alignment): as wide as the table and centered on it, its top <see cref="tableMargin"/> below the
+        /// table's bottom edge. The height (room for the rows) is the one set in the scene.
+        /// </summary>
+        void FollowTable()
+        {
+            if (tableFitter == null) return;
+            var rt = (RectTransform)transform;
+            var parent = rt.parent as RectTransform;
+            if (parent == null) return;
+            Rect table = tableFitter.FittedScreenRect; // screen pixels (overlay canvas)
+            if (table.width <= 0f) return;
+            float toCanvas = parent.lossyScale.x > 0f ? 1f / parent.lossyScale.x : 1f; // screen px → canvas units
+            parent.GetWorldCorners(parentCorners);
+            var anchor = new Vector2(0f, 0f);
+            var position = new Vector2((table.center.x - parentCorners[0].x) * toCanvas,
+                                       (table.yMin - parentCorners[0].y) * toCanvas - tableMargin);
+            var size = new Vector2(table.width * toCanvas, rt.sizeDelta.y);
+            if (rt.anchorMin != anchor || rt.anchorMax != anchor) rt.anchorMin = rt.anchorMax = anchor;
+            if (rt.pivot != new Vector2(0.5f, 1f)) rt.pivot = new Vector2(0.5f, 1f);
+            if ((rt.anchoredPosition - position).sqrMagnitude > 0.01f) rt.anchoredPosition = position;
+            if (Mathf.Abs(rt.sizeDelta.x - size.x) > 0.1f) rt.sizeDelta = size;
         }
     }
 }

@@ -70,19 +70,34 @@ namespace RoguelikePool
             }
         }
 
+        /// <summary>
+        /// Where the table (with its margins) really is on screen, in screen pixels: this rect shrunk to the
+        /// table's aspect ratio and placed by the alignment settings. Used by the shots counter to follow it.
+        /// </summary>
+        public Rect FittedScreenRect
+        {
+            get
+            {
+                if (table == null) table = FindAnyObjectByType<PoolTable>();
+                Rect screen = ScreenRect;
+                if (table == null) return screen;
+                Rect world = WorldRect;
+                if (world.width <= 0f || world.height <= 0f) return screen;
+                float s = Mathf.Min(screen.width / world.width, screen.height / world.height);
+                var size = world.size * s;
+                return new Rect(screen.x + (screen.width - size.x) * horizontalAlignment,
+                                screen.y + (screen.height - size.y) * verticalAlignment, size.x, size.y);
+            }
+        }
+
         public void Fit()
         {
             if (table == null) table = FindAnyObjectByType<PoolTable>();
             if (rig == null) rig = PixelCameraRig.Instance;
             if (table == null || rig == null) return;
-            // Shrink the screen rect to the table's aspect ratio, placed by the alignment settings.
-            Rect world = WorldRect, screen = ScreenRect;
+            Rect world = WorldRect;
             if (world.width <= 0f || world.height <= 0f) return;
-            float s = Mathf.Min(screen.width / world.width, screen.height / world.height);
-            var size = world.size * s;
-            var fitted = new Rect(screen.x + (screen.width - size.x) * horizontalAlignment,
-                                  screen.y + (screen.height - size.y) * verticalAlignment, size.x, size.y);
-            rig.SetFit(world, fitted);
+            rig.SetFit(world, FittedScreenRect);
         }
 
         void OnDrawGizmos()
