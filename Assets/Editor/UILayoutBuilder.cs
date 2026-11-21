@@ -460,7 +460,9 @@ public static class UILayoutBuilder
         if (tabs == null || gauge == null) throw new System.InvalidOperationException("Run steps 1-4 first.");
         var layout = tabs.GetComponent<RightColumnLayout>();
         if (layout == null) layout = tabs.gameObject.AddComponent<RightColumnLayout>();
-        Wire(layout, ("powerBar", gauge.transform), ("topMargin", 26f), ("topMarginTall", 110f), ("gapBelowTabs", 90f));
+        var percent = (TMP_Text)new SerializedObject(gauge).FindProperty("percentText").objectReferenceValue;
+        Wire(layout, ("powerBar", gauge.transform), ("topMargin", 26f), ("topMarginTall", 110f), ("gapBelowTabs", 90f),
+             ("gapEqualsTopMargin", true), ("percentLabel", percent != null ? percent.rectTransform : null));
         return Save("Step 7 done.");
     }
 
