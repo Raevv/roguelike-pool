@@ -31,9 +31,22 @@ namespace RoguelikePool
         /// <summary>Optional vignette to keep centered on the table.</summary>
         public Vignette Vignette { get; set; }
 
+        /// <summary>
+        /// Layer drawn by the overlay camera instead of the world camera (the cue): its render is shown
+        /// on its own canvas at <see cref="OverlaySortingOrder"/>, above the world and above UI canvases
+        /// sorted lower (shot chalks, money), but below the main UI (order 0).
+        /// </summary>
+        public const int OverlayLayer = 8;
+        public const int WorldSortingOrder = -100;
+        public const int BelowOverlaySortingOrder = -50; // UI elements the cue passes over
+        public const int OverlaySortingOrder = -40;
+
         Camera cam;
         RenderTexture target;
         RawImage display;
+        Camera overlayCam;
+        RenderTexture overlayTarget;
+        RawImage overlayDisplay;
         Rect fitWorld, fitScreen;
         bool hasFit;
         Vector2 displayOrigin; // screen position of the render texture's bottom-left corner
@@ -50,14 +63,18 @@ namespace RoguelikePool
             data.renderPostProcessing = true;
             data.antialiasing = AntialiasingMode.None;
 
+            cam.cullingMask &= ~(1 << OverlayLayer); // the cue is drawn by the overlay camera
+
             CreateScreenCamera();
             CreateDisplay();
+            CreateOverlayCamera();
         }
 
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
             if (target != null) target.Release();
+            if (overlayTarget != null) overlayTarget.Release();
         }
 
         /// <summary>
@@ -123,9 +140,22 @@ namespace RoguelikePool
                 target.Create();
                 cam.targetTexture = target;
                 display.texture = target;
+
+                if (overlayTarget != null) overlayTarget.Release();
+                overlayTarget = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32)
+                {
+                    name = "PixelOverlayTarget",
+                    filterMode = FilterMode.Bilinear,
+                    antiAliasing = 1,
+                    useMipMap = false
+                };
+                overlayTarget.Create();
+                overlayCam.targetTexture = overlayTarget;
+                overlayDisplay.texture = overlayTarget;
             }
             DisplayScale = k;
             cam.orthographicSize = h / (2f * ppu);
+            overlayCam.orthographicSize = cam.orthographicSize;
 
             // Camera on the fit center, snapped so world-grid art lands on whole texels.
             Vector2 c = world.center;
@@ -139,6 +169,9 @@ namespace RoguelikePool
             var rt = display.rectTransform;
             rt.anchoredPosition = displayOrigin;
             rt.sizeDelta = new Vector2(w * k, h * k);
+            var ort = overlayDisplay.rectTransform;
+            ort.anchoredPosition = displayOrigin;
+            ort.sizeDelta = rt.sizeDelta;
 
             if (Vignette != null)
                 Vignette.center.Override(new Vector2(centerTexel.x / w, centerTexel.y / h));
@@ -152,7 +185,16 @@ namespace RoguelikePool
             if (materialChecked) return;
             materialChecked = true;
             if (upscaleShader == null) upscaleShader = Shader.Find("Hidden/RoguelikePool/PixelUpscale");
-            if (upscaleShader != null) display.material = new Material(upscaleShader) { name = "PixelUpscale" };
+            if (upscaleShader != null)
+            {
+                display.material = new Material(upscaleShader) { name = "PixelUpscale" };
+                // The overlay render is transparent and premultiplied (sprites blended over a clear black).
+                var overlay = new Material(upscaleShader) { name = "PixelUpscaleOverlay" };
+                overlay.SetFloat("_KeepAlpha", 1f);
+                overlay.SetFloat("_SrcBlend", (float)BlendMode.One);
+                overlay.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                overlayDisplay.material = overlay;
+            }
             else Debug.LogWarning("PixelCameraRig : shader PixelUpscale introuvable, agrandissement bilinéaire simple.");
         }
 
@@ -173,20 +215,50 @@ namespace RoguelikePool
 
         void CreateDisplay()
         {
-            var canvasGo = new GameObject("PixelDisplay", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
+            display = CreateDisplayImage("PixelDisplay", "World", WorldSortingOrder);
+            overlayDisplay = CreateDisplayImage("PixelOverlayDisplay", "Overlay", OverlaySortingOrder);
+        }
+
+        static RawImage CreateDisplayImage(string canvasName, string imageName, int sortingOrder)
+        {
+            var canvasGo = new GameObject(canvasName, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
             var canvas = canvasGo.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = -100;
+            canvas.sortingOrder = sortingOrder;
             canvas.pixelPerfect = false; // the texture sits on fractional positions
             canvasGo.GetComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
 
-            var go = new GameObject("World", typeof(RectTransform), typeof(RawImage));
+            var go = new GameObject(imageName, typeof(RectTransform), typeof(RawImage));
             go.transform.SetParent(canvasGo.transform, false);
-            display = go.GetComponent<RawImage>();
-            display.raycastTarget = false;
-            var rt = display.rectTransform;
+            var image = go.GetComponent<RawImage>();
+            image.raycastTarget = false;
+            var rt = image.rectTransform;
             rt.anchorMin = rt.anchorMax = rt.pivot = Vector2.zero;
             rt.anchoredPosition = Vector2.zero;
+            return image;
+        }
+
+        /// <summary>
+        /// Second camera, child of the world camera (same position and size), that renders only
+        /// <see cref="OverlayLayer"/> on a transparent background, with the same post-processing (needs
+        /// "Allow Post Process Alpha Output" on the URP assets to keep the alpha).
+        /// </summary>
+        void CreateOverlayCamera()
+        {
+            var go = new GameObject("OverlayCamera");
+            go.transform.SetParent(transform, false);
+            overlayCam = go.AddComponent<Camera>();
+            overlayCam.orthographic = true;
+            overlayCam.cullingMask = 1 << OverlayLayer;
+            overlayCam.clearFlags = CameraClearFlags.SolidColor;
+            overlayCam.backgroundColor = new Color(0f, 0f, 0f, 0f);
+            overlayCam.depth = cam.depth + 1f;
+            overlayCam.allowMSAA = false;
+            overlayCam.allowHDR = true;
+            overlayCam.allowDynamicResolution = false;
+            var data = overlayCam.GetUniversalAdditionalCameraData();
+            data.renderPostProcessing = true;
+            data.antialiasing = AntialiasingMode.None;
         }
 
         /// <summary>Global volume: low-res bloom on HDR glows, cool vignette, punchier contrast.</summary>

@@ -122,6 +122,10 @@ namespace RoguelikePool
                 cueStick.name = cuePrefab.name;
             }
 
+            // The cue (not its shadow) is drawn by the overlay camera, above the shot chalks and the money.
+            cueStick.gameObject.layer = PixelCameraRig.OverlayLayer;
+            if (cueStick.stick != null) cueStick.stick.gameObject.layer = PixelCameraRig.OverlayLayer;
+
             var cue = new GameObject("CueController").AddComponent<CueController>();
             cue.Init(cueBall, ui, preview, table, rules, cueStick);
         }

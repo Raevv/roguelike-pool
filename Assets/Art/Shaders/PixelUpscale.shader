@@ -1,12 +1,16 @@
 // Shows the low-res world render at any (non-integer) scale with crisp, even pixels ("sharp bilinear"):
 // inside each art pixel the texture is sampled at the texel center, and only the last screen pixel
 // next to a texel edge is blended with the neighbour (needs a Bilinear texture). Used by the RawImage
-// of PixelCameraRig.
+// of PixelCameraRig. With _KeepAlpha (and Blend One OneMinusSrcAlpha) it also composites a transparent,
+// premultiplied overlay render (the cue drawn above some UI elements).
 Shader "Hidden/RoguelikePool/PixelUpscale"
 {
     Properties
     {
         [PerRendererData] _MainTex ("Texture", 2D) = "white" {}
+        _KeepAlpha ("Keep Alpha (premultiplied overlay)", Float) = 0
+        [HideInInspector] _SrcBlend ("Src Blend", Float) = 1
+        [HideInInspector] _DstBlend ("Dst Blend", Float) = 0
     }
     SubShader
     {
@@ -14,7 +18,7 @@ Shader "Hidden/RoguelikePool/PixelUpscale"
         Cull Off
         ZWrite Off
         ZTest [unity_GUIZTestMode]
-        Blend Off
+        Blend [_SrcBlend] [_DstBlend]
 
         Pass
         {
@@ -25,6 +29,7 @@ Shader "Hidden/RoguelikePool/PixelUpscale"
 
             sampler2D _MainTex;
             float4 _MainTex_TexelSize;
+            float _KeepAlpha;
 
             struct appdata { float4 vertex : POSITION; float2 uv : TEXCOORD0; };
             struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; };
@@ -46,7 +51,7 @@ Shader "Hidden/RoguelikePool/PixelUpscale"
                 // each edge is antialiased over exactly one screen pixel.
                 float2 g = clamp(f / a, 0.0, 0.5) + clamp((f - 1.0) / a + 0.5, 0.0, 0.5);
                 fixed4 c = tex2D(_MainTex, (floor(t) + g) * _MainTex_TexelSize.xy);
-                c.a = 1.0;
+                if (_KeepAlpha < 0.5) c.a = 1.0; // the world render is opaque; an overlay keeps its alpha
                 return c;
             }
             ENDCG

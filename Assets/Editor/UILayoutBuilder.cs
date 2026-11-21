@@ -504,6 +504,41 @@ public static class UILayoutBuilder
         return Save("Step 9 done.");
     }
 
+    // ---------------------------------------------------------------- Step 10: cue above chalks and money
+
+    [MenuItem("Tools/Roguelike Pool/UI Layout/10. Cue drawn above the shot chalks and the money")]
+    public static string Step10()
+    {
+        // The chalks and the money get their own sorting (below the cue's overlay canvas); the rest of
+        // the UI stays above the cue.
+        var counter = Object.FindAnyObjectByType<ShotsCounter>(FindObjectsInactive.Include);
+        var money = Object.FindAnyObjectByType<MoneyDisplay>(FindObjectsInactive.Include);
+        foreach (var c in new Component[] { counter, money })
+        {
+            if (c == null) continue;
+            var canvas = c.GetComponent<Canvas>();
+            if (canvas == null) canvas = c.gameObject.AddComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = PixelCameraRig.BelowOverlaySortingOrder;
+        }
+
+        // The cue camera's post-processing must keep the alpha of its transparent render.
+        int assets = 0;
+        foreach (var path in new[] { "Assets/Settings/PC_RPAsset.asset", "Assets/Settings/Mobile_RPAsset.asset" })
+        {
+            var asset = AssetDatabase.LoadMainAssetAtPath(path);
+            if (asset == null) continue;
+            var so = new SerializedObject(asset);
+            var prop = so.FindProperty("m_AllowPostProcessAlphaOutput");
+            if (prop == null) continue;
+            prop.boolValue = true;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssetIfDirty(asset);
+            assets++;
+        }
+        return Save($"Step 10 done (URP assets with alpha output: {assets}).");
+    }
+
     /// <summary>Places a Content child by its mockup edges, anchored to the content's bottom-right corner.</summary>
     static void PlaceBottomRight(RectTransform rt, float left, float top, float right, float bottom)
     {
