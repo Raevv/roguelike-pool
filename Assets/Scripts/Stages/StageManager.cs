@@ -150,9 +150,11 @@ namespace RoguelikePool
         }
 
         /// <summary>Adds merged points to the displayed score (never above the real score).</summary>
-        public void AddDisplayedScore(int points)
+        public void AddDisplayedScore(int points, bool allowAboveScore = false)
         {
-            displayedScore = Mathf.Min(displayedScore + points, score);
+            displayedScore += points;
+            // allowAboveScore: debug simulation only (points that are not real); SyncDisplayedScore puts it back.
+            if (!allowAboveScore) displayedScore = Mathf.Min(displayedScore, score);
             Refresh();
         }
 

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -62,7 +63,7 @@ namespace RoguelikePool
         readonly List<ScorePopup> active = new List<ScorePopup>();
         readonly Stack<ScorePopup> pool = new Stack<ScorePopup>();
         readonly List<Flight> flights = new List<Flight>();
-        bool waiting, merging;
+        bool waiting, merging, simulating;
         float waitTime, launchTimer, launchDelay, flightTime;
         int mergeIndex;
         StageHUD hud;
@@ -109,9 +110,63 @@ namespace RoguelikePool
         /// <summary>Stage start or restart: every popup back in the pool, no wait, no merge, shooting free.</summary>
         public void ResetAll()
         {
+            StopAllCoroutines(); // a running simulation
+            simulating = false;
             Clear();
             waiting = false;
             if (rules != null) rules.ScoreMergeBusy = false;
+        }
+
+        // ------------------------------------------------------------------ debug
+
+        [Header("Débogage (menu contextuel « Simuler 5 empochages », en Play Mode)")]
+        [Tooltip("Délai entre deux empochages simulés (s).")]
+        [SerializeField] float simulateInterval = 0.2f;
+        [Tooltip("Temps pendant lequel les textes simulés restent à leur poche avant la fusion (s).")]
+        [SerializeField] float simulateHold = 1.5f;
+        [Tooltip("Valeur maximale d'un texte simulé (valeur au hasard de 1 à ce nombre).")]
+        [SerializeField, Min(1)] int simulateMaxPoints = 3;
+
+        /// <summary>
+        /// Debug: 5 popups at random pockets (random values), a short hold, then the merge. The points are
+        /// not real: the displayed score goes up during the merge, then back to the real score; no stage
+        /// rule is touched. Play Mode only, when no shot or merge is running.
+        /// </summary>
+        [ContextMenu("Simuler 5 empochages")]
+        public void Simulate5() => Simulate(5);
+
+        public void Simulate(int count)
+        {
+            if (!Application.isPlaying || stages == null || Pocket.Active.Count == 0)
+            {
+                Debug.LogWarning("[Popups] Simuler : seulement en Play Mode.");
+                return;
+            }
+            if (waiting || merging || simulating || !Ball.AllStopped)
+            {
+                Debug.LogWarning("[Popups] Simuler : attends la fin du tir et de la fusion en cours.");
+                return;
+            }
+            StartCoroutine(SimulateRoutine(count));
+        }
+
+        IEnumerator SimulateRoutine(int count)
+        {
+            simulating = true;
+            for (int i = 0; i < count; i++)
+            {
+                var pocket = Pocket.Active[Random.Range(0, Pocket.Active.Count)];
+                Spawn(pocket, new ScorePopupData(Random.Range(1, simulateMaxPoints + 1)));
+                yield return new WaitForSeconds(simulateInterval);
+            }
+            yield return new WaitForSeconds(simulateHold);
+            waiting = false;
+            StartMerge();
+            while (merging) yield return null;
+            yield return new WaitForSeconds(0.8f); // let the last pulse be seen
+            simulating = false;
+            stages.SyncDisplayedScore(); // back to the real score
+            Debug.Log("[Popups] Simulation terminée.");
         }
 
         void OnBallPocketed(Ball ball, Pocket pocket, int points) => Spawn(pocket, new ScorePopupData(points));
@@ -302,7 +357,7 @@ namespace RoguelikePool
 
         void Update()
         {
-            if (waiting)
+            if (waiting && !simulating) // the simulation launches its merge itself
             {
                 waitTime += Time.deltaTime;
                 // The strike lands a few frames after the shot is confirmed: wait a moment before trusting "still".
@@ -378,7 +433,7 @@ namespace RoguelikePool
 
         void Arrive(Flight f)
         {
-            stages.AddDisplayedScore(f.popup.Data.points);
+            stages.AddDisplayedScore(f.popup.Data.points, simulating);
             if (hud != null) hud.PulseScore(Settings.scorePulseAmount, Settings.scorePulseDuration);
             Release(f.popup);
             PopupMerged?.Invoke(f.index);
@@ -393,7 +448,7 @@ namespace RoguelikePool
             Clear();
             if (points > 0)
             {
-                stages.AddDisplayedScore(points);
+                stages.AddDisplayedScore(points, simulating);
                 if (hud != null) hud.PulseScore(Settings.scorePulseAmount, Settings.scorePulseDuration);
             }
             CompleteMerge();
