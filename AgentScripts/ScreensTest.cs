@@ -26,6 +26,8 @@ public static class ScreensTest
             rules.TakeSnapshot();
             if (pot) Ball.All.First(b => !b.IsCue && !b.IsPocketed).FallInto(table.Pockets[0]);
             await Task.Delay(500);
+            // Wait for the score merge (rules.Busy) before reading the stage state.
+            for (float t0 = Time.time; rules.Busy && sm.CurrentState == StageManager.State.Playing && Time.time - t0 < 5f; ) await Task.Yield();
         }
         Button ScreenButton() => Object.FindObjectsByType<Button>(FindObjectsInactive.Include).First(b => b.name == "Button");
 
@@ -38,6 +40,7 @@ public static class ScreensTest
             {
                 await Shot(true);
                 if (sm.CurrentState != StageManager.State.StageWon) break;
+                for (float t0 = Time.time; !screens.IsShown && Time.time - t0 < 5f; ) await Task.Yield(); // the button gets its action when the screen shows
                 ScreenButton().onClick.Invoke();
                 await Task.Delay(100);
             }
@@ -45,6 +48,9 @@ public static class ScreensTest
         else if (mode == "click") { ScreenButton().onClick.Invoke(); await Task.Delay(200); }
 
         await Task.Delay(300);
+        // The end screen appears after the score merge and StageScreens.showDelay.
+        for (float t0 = Time.time; sm.CurrentState != StageManager.State.Playing && !screens.IsShown && Time.time - t0 < 5f; ) await Task.Yield();
+        await Task.Delay(100); // one canvas update after the screen appears
         Vector2 center = new Vector2(Screen.width * 0.4f, Screen.height * 0.5f);
         string texts = string.Join(" | ", Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsInactive.Exclude)
             .Where(t => t.GetComponentInParent<StageScreens>() != null)

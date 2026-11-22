@@ -27,6 +27,10 @@ namespace RoguelikePool
         [SerializeField] Button button;
         [SerializeField] TMP_Text buttonLabel;
 
+        [Header("Délai")]
+        [Tooltip("Battement entre la fin de la fusion du score et l'apparition de l'écran de victoire ou de défaite (s), pour voir le score final. 0 = tout de suite.")]
+        [SerializeField, Min(0f)] float showDelay = 1f;
+
         [Header("Couleurs")]
         [SerializeField] Color victoryTitleColor = new Color32(0xf5, 0xc8, 0x6a, 0xff);
         [SerializeField] Color defeatTitleColor = new Color32(0xff, 0x6a, 0x4a, 0xff);
@@ -59,16 +63,16 @@ namespace RoguelikePool
             foreach (var text in GetComponentsInChildren<TMP_Text>(true)) text.raycastTarget = false;
 
             veil.SetActive(false);
-            manager.StageWon += OnStageWon;
-            manager.StageLost += OnStageLost;
+            manager.StageWon += OnStageWonDelayed;
+            manager.StageLost += OnStageLostDelayed;
             manager.Changed += OnChanged;
         }
 
         void OnDestroy()
         {
             if (manager == null) return;
-            manager.StageWon -= OnStageWon;
-            manager.StageLost -= OnStageLost;
+            manager.StageWon -= OnStageWonDelayed;
+            manager.StageLost -= OnStageLostDelayed;
             manager.Changed -= OnChanged;
         }
 
@@ -77,7 +81,39 @@ namespace RoguelikePool
 
         void OnChanged()
         {
-            if (manager.CurrentState == StageManager.State.Playing && veil.activeSelf) veil.SetActive(false);
+            if (manager.CurrentState != StageManager.State.Playing) return;
+            CancelPending(); // stage restarted while a screen was waiting to appear
+            if (veil.activeSelf) veil.SetActive(false);
+        }
+
+        void OnStageWonDelayed() => ShowLater(OnStageWon);
+        void OnStageLostDelayed() => ShowLater(OnStageLost);
+
+        Coroutine pending;
+
+        /// <summary>
+        /// The stage is already over (shooting locked); the screen waits <see cref="showDelay"/> so the
+        /// final score can be seen after the merge.
+        /// </summary>
+        void ShowLater(System.Action show)
+        {
+            CancelPending();
+            if (showDelay <= 0f) { show(); return; }
+            pending = StartCoroutine(ShowAfter(show));
+        }
+
+        IEnumerator ShowAfter(System.Action show)
+        {
+            yield return new WaitForSeconds(showDelay);
+            pending = null;
+            if (manager.CurrentState != StageManager.State.Playing) show();
+        }
+
+        void CancelPending()
+        {
+            if (pending == null) return;
+            StopCoroutine(pending);
+            pending = null;
         }
 
         void OnStageWon()
