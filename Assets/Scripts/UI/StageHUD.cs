@@ -71,8 +71,9 @@ namespace RoguelikePool
             int shots = manager.ShotsLeft;
             stageValue.text = GameTexts.Format(texts.hudStageFormat, manager.StageNumber, manager.StageCount);
             stageValue.color = stageColor;
-            scoreValue.text = GameTexts.Format(texts.hudScoreFormat, manager.Score, manager.Target);
-            scoreValue.color = manager.Score >= manager.Target ? scoreReachedColor : scoreColor;
+            int shown = manager.DisplayedScore;
+            scoreValue.text = GameTexts.Format(texts.hudScoreFormat, shown, manager.Target);
+            scoreValue.color = shown >= manager.Target ? scoreReachedColor : scoreColor;
             TextShadow.Fit(stageValue);
             TextShadow.Fit(scoreValue);
             if (shotsValue == null) return; // replaced by the ShotsCounter icons

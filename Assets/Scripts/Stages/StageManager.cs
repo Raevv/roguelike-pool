@@ -29,6 +29,8 @@ namespace RoguelikePool
         [Header("État (lecture seule, pour le debug)")]
         [SerializeField] int stageNumber;
         [SerializeField] int score;
+        [Tooltip("Score montré dans le HUD : il ne monte que pendant la fusion des textes de score.")]
+        [SerializeField] int displayedScore;
         [SerializeField] int target;
         [SerializeField] int shotsLeft;
         [SerializeField] State state;
@@ -39,6 +41,13 @@ namespace RoguelikePool
         public event Action StageWon;
         /// <summary>Raised once when the shots run out below the target.</summary>
         public event Action StageLost;
+        /// <summary>
+        /// Raised when a colored ball scores during a shot, with the points it gave (built on
+        /// <see cref="Ball.Pocketed"/>, which knows nothing about points). For the score popups.
+        /// </summary>
+        public event Action<Ball, Pocket, int> BallPocketed;
+        /// <summary>Raised once per shot when every ball is still and no scratch rewind runs.</summary>
+        public event Action ShotEnded;
 
         public StageCatalog Catalog { get; private set; }
         /// <summary>0-based index of the current stage in the catalog.</summary>
@@ -46,7 +55,10 @@ namespace RoguelikePool
         public StageData Stage => Catalog.Get(StageIndex);
         public int StageNumber => StageIndex + 1;
         public int StageCount => Catalog.Count;
+        /// <summary>Real score, updated as soon as a ball is pocketed (used by the rules).</summary>
         public int Score => score;
+        /// <summary>Score shown in the HUD ("Score / Objectif"): catches up with <see cref="Score"/> only during the merge.</summary>
+        public int DisplayedScore => displayedScore;
         public int Target => Stage.targetScore;
         public int ShotsLeft => shotsLeft;
         public int MaxShots => Stage.maxShots;
@@ -97,6 +109,7 @@ namespace RoguelikePool
         {
             StageIndex = index;
             score = 0;
+            displayedScore = 0;
             shotsLeft = Stage.maxShots;
             shotInProgress = false;
             shotPoints = 0;
@@ -130,6 +143,22 @@ namespace RoguelikePool
             shotPoints += pointsPerBall;
             score += pointsPerBall;
             Refresh();
+            BallPocketed?.Invoke(ball, pocket, pointsPerBall);
+        }
+
+        /// <summary>Adds merged points to the displayed score (never above the real score).</summary>
+        public void AddDisplayedScore(int points)
+        {
+            displayedScore = Mathf.Min(displayedScore + points, score);
+            Refresh();
+        }
+
+        /// <summary>Snaps the displayed score to the real score.</summary>
+        public void SyncDisplayedScore()
+        {
+            if (displayedScore == score) return;
+            displayedScore = score;
+            Refresh();
         }
 
         void OnShotCancelled()
@@ -156,6 +185,9 @@ namespace RoguelikePool
         void EndShot()
         {
             shotInProgress = false;
+            ShotEnded?.Invoke();
+            // Temporary (step 1 of the score popups): no merge animation yet, so the HUD catches up here.
+            SyncDisplayedScore();
             Debug.Log($"[Stage] Tir terminé : +{shotPoints} point(s), score {score}/{Target}, tirs restants {shotsLeft}/{MaxShots}.");
             if (score >= Target)
             {
