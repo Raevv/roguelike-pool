@@ -50,6 +50,50 @@ public static class ScorePopupBuilder
         return $"Score popups step 2 done: {PrefabPath}, UI/PopupLayer (sibling {layerRt.GetSiblingIndex()}), bootstrap wired={boot != null}.";
     }
 
+    /// <summary>UI elements the popups must not cover (scene object names under UI).</summary>
+    static readonly string[] AvoidNames =
+    {
+        "SettingsButton", "StageTitle", "ScoreObjective", "Money", "BonusTabs",
+        "PowerGauge", "ShootButton", "FineAimButton", "ShotsCounter",
+    };
+
+    [MenuItem("Tools/Roguelike Pool/Score Popups/3. UI elements the popups avoid")]
+    public static string Step3()
+    {
+        if (EditorApplication.isPlaying) throw new System.InvalidOperationException("Stop Play Mode first.");
+        var layer = Object.FindAnyObjectByType<ScorePopupLayer>(FindObjectsInactive.Include);
+        if (layer == null) throw new System.InvalidOperationException("Run step 2 first.");
+        var root = GameObject.Find(UISceneBuilder.RootName).transform;
+        var so = new SerializedObject(layer);
+        var list = so.FindProperty("avoid");
+        list.ClearArray();
+        string found = "", missing = "";
+        foreach (var name in AvoidNames)
+        {
+            var t = FindDeep(root, name) as RectTransform;
+            if (t == null) { missing += name + " "; continue; }
+            list.InsertArrayElementAtIndex(list.arraySize);
+            list.GetArrayElementAtIndex(list.arraySize - 1).objectReferenceValue = t;
+            found += $"{name}{t.rect.size} ";
+        }
+        so.ApplyModifiedPropertiesWithoutUndo();
+        var scene = EditorSceneManager.GetActiveScene();
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        return $"Score popups step 3 done. Avoid: {found}| missing: {missing}";
+    }
+
+    static Transform FindDeep(Transform parent, string name)
+    {
+        foreach (Transform child in parent)
+        {
+            if (child.name == name) return child;
+            var found = FindDeep(child, name);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
     static GameObject BuildPrefab()
     {
         System.IO.Directory.CreateDirectory("Assets/Prefabs/UI");

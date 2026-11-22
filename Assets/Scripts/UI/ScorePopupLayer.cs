@@ -20,16 +20,25 @@ namespace RoguelikePool
         [SerializeField] ScorePopup popupPrefab;
         [Tooltip("Popups créés d'avance dans le pool.")]
         [SerializeField] int prewarm = 10;
-        [Tooltip("Distance entre la poche et le texte, vers l'extérieur de la table (unités du canvas). Provisoire : l'éventail arrive à l'étape 3.")]
-        [SerializeField] float pocketDistance = 110f;
-        [Tooltip("Place minimale entre la poche et le bord du cadre, de son côté extérieur (unités du canvas). En dessous : poche de coin → texte au-dessus / en dessous d'elle, poche du milieu → texte sur la table.")]
+        [Header("Éventail")]
+        [Tooltip("Rayon de l'éventail : distance entre la poche et les textes, vers l'extérieur de la table (unités du canvas).")]
+        [SerializeField] float fanRadius = 110f;
+        [Tooltip("Rayon de l'éventail quand les textes vont sur la table (poche du milieu sans place à l'extérieur).")]
+        [SerializeField] float inwardFanRadius = 120f;
+        [Tooltip("Espace minimal entre deux textes (unités du canvas). Couvre aussi le flottement.")]
+        [SerializeField] float fanSpacing = 14f;
+        [Tooltip("Angle maximal de l'éventail de chaque côté de sa direction (degrés).")]
+        [SerializeField] float maxFanAngle = 110f;
+        [Tooltip("Anneaux successifs quand l'arc est plein (chacun plus loin de la hauteur d'un texte).")]
+        [SerializeField] int maxRings = 4;
+        [Tooltip("Place minimale entre la poche et le bord du cadre, de son côté extérieur (unités du canvas). En dessous : poche de coin → textes au-dessus / en dessous d'elle, poche du milieu → textes sur la table.")]
         [SerializeField] float minSideRoom = 200f;
-        [Tooltip("Distance quand le texte va sur la table (poche du milieu sans place à l'extérieur).")]
-        [SerializeField] float inwardDistance = 120f;
         [Tooltip("Marge entre le texte et le bord du cadre du jeu (Safe Area), unités du canvas.")]
         [SerializeField] float screenMargin = 12f;
         [Tooltip("Zone visible où les textes doivent rester (SafeArea). Vide = cherchée dans la scène, sinon tout l'écran.")]
         [SerializeField] RectTransform visibleArea;
+        [Tooltip("Éléments d'interface que les textes ne doivent pas recouvrir (boutons, jauge, onglets, score, craies…).")]
+        [SerializeField] List<RectTransform> avoid = new List<RectTransform>();
 
         readonly List<ScorePopup> active = new List<ScorePopup>();
         readonly Stack<ScorePopup> pool = new Stack<ScorePopup>();
@@ -76,30 +85,102 @@ namespace RoguelikePool
             popup.transform.SetAsLastSibling(); // newest on top
             active.Add(popup);
             popup.Show(data); // sets the text first: its size decides the placement
-            popup.Offset = ChooseOffset(pocket, popup.TextSize);
+            popup.Size = popup.TextSize;
+            popup.Offset = ChooseOffset(popup);
             Place(popup);
             return popup;
         }
 
         /// <summary>
-        /// Away from the table if there is room on that side (<see cref="minSideRoom"/>) and the text fits
-        /// inside the visible area. Otherwise (table close to the screen edge): a corner pocket puts it straight above / below itself, a side pocket puts it
-        /// on the table. The result is always clamped inside the visible area.
+        /// Fan placement. The fan's direction: away from the table if there is room on that side
+        /// (<see cref="minSideRoom"/>); otherwise (table close to the screen edge) straight above / below a
+        /// corner pocket, or onto the table for a side pocket. Successive texts take the next free slot of
+        /// an arc around the pocket, sweeping clockwise (−step, 0, +step, +2·step…, then the other side),
+        /// so +1, +2, +3 go from one side to the other like the reference. A slot is skipped if the text
+        /// would overlap another popup or leave the visible area; a full arc moves on to a farther ring.
         /// </summary>
-        Vector2 ChooseOffset(Pocket pocket, Vector2 size)
+        Vector2 ChooseOffset(ScorePopup popup)
         {
-            Vector2 pocketPos = ToLayer(pocket.transform.position);
+            Vector2 size = popup.Size;
+            Vector2 pocketPos = ToLayer(popup.Pocket.transform.position);
             Rect area = VisibleRect();
-            Vector2 outward = Outward(pocket);
-            Vector2 offset = outward * pocketDistance;
+            Vector2 outward = Outward(popup.Pocket);
+            Vector2 dir = outward;
+            float radius = fanRadius;
             float sideRoom = outward.x < 0f ? pocketPos.x - area.xMin : area.xMax - pocketPos.x;
-            if (sideRoom < minSideRoom || !Fits(pocketPos + offset, size, area))
+            if (sideRoom < minSideRoom || !Fits(pocketPos + outward * fanRadius, size, area))
             {
                 bool side = Mathf.Abs(outward.y) < 0.5f;
-                offset = side ? -outward * inwardDistance
-                              : new Vector2(0f, Mathf.Sign(outward.y)) * pocketDistance;
+                dir = side ? -outward : new Vector2(0f, Mathf.Sign(outward.y));
+                if (side) radius = inwardFanRadius;
             }
-            return Clamp(pocketPos + offset, size, area) - pocketPos;
+
+            // Two texts whose centers are one diagonal apart can never overlap, whatever the angle.
+            float ringStep = (size + Vector2.one * fanSpacing).magnitude;
+            // Pass 1: the fan. Pass 2 (crowded pocket): all around the pocket, farther away.
+            if (TryRings(popup, pocketPos, dir, radius, ringStep, maxFanAngle, Mathf.Max(1, maxRings), size, area, out var offset) ||
+                TryRings(popup, pocketPos, dir, radius, ringStep, 180f, Mathf.Max(1, maxRings) * 2, size, area, out offset))
+                return offset;
+            // Still no free slot: the first slot of the fan, kept on screen.
+            float firstStep = SlotAngle(ringStep, radius);
+            return Clamp(pocketPos + Rotate(dir, firstStep) * radius, size, area) - pocketPos;
+        }
+
+        bool TryRings(ScorePopup popup, Vector2 pocketPos, Vector2 dir, float radius, float ringStep, float maxAngle,
+                      int rings, Vector2 size, Rect area, out Vector2 offset)
+        {
+            for (int ring = 0; ring < rings; ring++)
+            {
+                float r = radius + ring * ringStep;
+                float step = SlotAngle(ringStep, r);
+                int perSide = Mathf.Max(1, Mathf.FloorToInt(maxAngle / step));
+                foreach (int k in SweepOrder(perSide))
+                {
+                    offset = Rotate(dir, -k * step) * r; // negative angle = clockwise on screen
+                    Vector2 center = pocketPos + offset;
+                    if (Fits(center, size, area) && !Overlaps(popup, center, size)) return true;
+                }
+            }
+            offset = default;
+            return false;
+        }
+
+        /// <summary>Angle between two neighbours on a ring of radius r, so that their centers are one chord apart.</summary>
+        static float SlotAngle(float chord, float r) => 2f * Mathf.Asin(Mathf.Min(1f, chord / (2f * r))) * Mathf.Rad2Deg;
+
+        /// <summary>Slot order on one ring: −1, 0, 1, 2 … perSide, then −2 … −perSide.</summary>
+        static IEnumerable<int> SweepOrder(int perSide)
+        {
+            yield return -1;
+            for (int k = 0; k <= perSide; k++) yield return k;
+            for (int k = 2; k <= perSide; k++) yield return -k;
+        }
+
+        static Vector2 Rotate(Vector2 v, float degrees)
+        {
+            float a = degrees * Mathf.Deg2Rad, c = Mathf.Cos(a), s = Mathf.Sin(a);
+            return new Vector2(v.x * c - v.y * s, v.x * s + v.y * c);
+        }
+
+        /// <summary>Would a text at this center overlap another active popup (any pocket) or a UI element to avoid?</summary>
+        bool Overlaps(ScorePopup self, Vector2 center, Vector2 size)
+        {
+            var box = new Rect(center - size * 0.5f, size);
+            foreach (var element in avoid)
+            {
+                if (element == null || !element.gameObject.activeInHierarchy) continue;
+                Rect r = ToLayerRect(element);
+                r.xMin -= fanSpacing; r.yMin -= fanSpacing; r.xMax += fanSpacing; r.yMax += fanSpacing;
+                if (r.Overlaps(box)) return true;
+            }
+            foreach (var other in active)
+            {
+                if (other == self || other.Pocket == null) continue;
+                Vector2 c = ToLayer(other.Pocket.transform.position) + other.Offset;
+                Vector2 gap = (size + other.Size) * 0.5f + Vector2.one * fanSpacing;
+                if (Mathf.Abs(center.x - c.x) < gap.x && Mathf.Abs(center.y - c.y) < gap.y) return true;
+            }
+            return false;
         }
 
         bool Fits(Vector2 center, Vector2 size, Rect area)
@@ -123,7 +204,13 @@ namespace RoguelikePool
         Rect VisibleRect()
         {
             if (visibleArea == null) { var r = Layer.rect; return new Rect(r.position - r.center, r.size); }
-            visibleArea.GetWorldCorners(corners);
+            return ToLayerRect(visibleArea);
+        }
+
+        /// <summary>Any RectTransform of the canvas, in this layer's centered coordinates.</summary>
+        Rect ToLayerRect(RectTransform element)
+        {
+            element.GetWorldCorners(corners);
             Vector2 a = (Vector2)Layer.InverseTransformPoint(corners[0]) - Layer.rect.center;
             Vector2 b = (Vector2)Layer.InverseTransformPoint(corners[2]) - Layer.rect.center;
             return Rect.MinMaxRect(a.x, a.y, b.x, b.y);

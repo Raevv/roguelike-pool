@@ -49,6 +49,8 @@ namespace RoguelikePool
         public Pocket Pocket { get; set; }
         /// <summary>Offset from the pocket's screen position, in canvas units of the layer.</summary>
         public Vector2 Offset { get; set; }
+        /// <summary>Text size used for placement (set by the layer when shown).</summary>
+        public Vector2 Size { get; set; }
 
         float age, phase, tilt;
         Color defaultColor;
@@ -69,7 +71,10 @@ namespace RoguelikePool
             get
             {
                 Init();
-                return text.GetPreferredValues(text.text);
+                // Drawn glyphs only (preferred values include the line height, far taller than "+1").
+                text.ForceMeshUpdate();
+                Vector2 size = text.textBounds.size;
+                return size.x > 0f ? size : text.GetPreferredValues(text.text);
             }
         }
 
