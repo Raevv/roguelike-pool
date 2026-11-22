@@ -61,6 +61,8 @@ namespace RoguelikePool
         public string hudScoreFormat = "{0} / {1}";
         [Tooltip("Argent à côté de la pièce (dollars). {0} = montant.")]
         public string moneyFormat = "{0}";
+        [Tooltip("Texte flottant à la poche quand une boule marque. {0} = points.")]
+        public string popupPointsFormat = "+{0}";
         [Tooltip("HUD, colonne TIRS. {0} = tirs restants, {1} = tirs max.")]
         public string hudShotsFormat = "{0}/{1}";
         [Tooltip("Victoire, ligne 1. {0} = n° du stage.")]

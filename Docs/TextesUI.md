@@ -29,6 +29,7 @@ Depuis la branche `ui-text`, chaque texte est un objet **TextMeshPro - Text (UI)
 | Stage 1 | Formats › Hud Stage Format `Stage {0}` | `UI/SafeArea/Content/TopBar/StageTitle` |
 | 0 / 100 | Formats › Hud Score Format `{0} / {1}` | `UI/SafeArea/Content/TopBar/ScoreObjective` |
 | 999 (argent) | Formats › Money Format `{0}` | `UI/SafeArea/Content/TopBar/Money/MoneyText` |
+| +1 (texte à la poche) | Formats › Popup Points Format `+{0}` | prefab `Assets/Prefabs/UI/ScorePopup` (instances sous `UI/PopupLayer` en Play Mode) |
 | Menu des paramètres | Menu des paramètres › Settings Title, Options/Restart/Quit/Close Button | `UI/Overlays/SettingsPanel/Placeholder_SettingsMenu/…` (objet inactif) |
 | Titre de fin | Titres › Victory Titles, Run Won Titles, Defeat Titles (un au hasard) | `UI/Overlays/StageScreens/Veil/Panel/Title` |
 | Ligne 1 | Formats › Stage Won Line 1, Run Won Line 1, Defeat Line 1 | `…/Veil/Panel/Line1` |
