@@ -83,6 +83,33 @@ public static class ScorePopupBuilder
         return $"Score popups step 3 done. Avoid: {found}| missing: {missing}";
     }
 
+    public const string SettingsPath = "Assets/Data/ScorePopupSettings.asset";
+
+    [MenuItem("Tools/Roguelike Pool/Score Popups/6. ScorePopupSettings asset")]
+    public static string Step6()
+    {
+        if (EditorApplication.isPlaying) throw new System.InvalidOperationException("Stop Play Mode first.");
+        var settings = AssetDatabase.LoadAssetAtPath<ScorePopupSettings>(SettingsPath);
+        bool created = settings == null;
+        if (created) // never overwrite tuned values
+        {
+            settings = ScriptableObject.CreateInstance<ScorePopupSettings>();
+            AssetDatabase.CreateAsset(settings, SettingsPath);
+            AssetDatabase.SaveAssets();
+        }
+        var layer = Object.FindAnyObjectByType<ScorePopupLayer>(FindObjectsInactive.Include);
+        if (layer == null) throw new System.InvalidOperationException("Run step 2 first.");
+        UILayoutBuilder.Wire(layer, ("settings", settings));
+        // Re-save the prefab so the old per-popup fields (now in the settings) leave its YAML.
+        var prefab = PrefabUtility.LoadPrefabContents(PrefabPath);
+        PrefabUtility.SaveAsPrefabAsset(prefab, PrefabPath);
+        PrefabUtility.UnloadPrefabContents(prefab);
+        var scene = EditorSceneManager.GetActiveScene();
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        return $"Score popups step 6 done: {SettingsPath} ({(created ? "created" : "kept")}), assigned to PopupLayer.";
+    }
+
     static Transform FindDeep(Transform parent, string name)
     {
         foreach (Transform child in parent)

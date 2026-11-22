@@ -33,19 +33,18 @@ namespace RoguelikePool
         [Tooltip("Tirs restants au dernier tir.")]
         [SerializeField] Color shotsDangerColor = new Color32(0xff, 0x6a, 0x4a, 0xff);
 
-        [Header("Pulsation du score (fusion des textes)")]
-        [Tooltip("Agrandissement maximal du texte du score à chaque texte fusionné (0,2 = +20 %).")]
-        [SerializeField] float pulseAmount = 0.2f;
-        [Tooltip("Durée d'une pulsation, en secondes.")]
-        [SerializeField] float pulseDuration = 0.15f;
-
         /// <summary>The "score / target" text: where the score popups fly to.</summary>
         public RectTransform ScoreText => scoreValue != null ? scoreValue.rectTransform : null;
 
-        float pulseTime = -1f;
+        float pulseTime = -1f, pulseAmount, pulseDuration;
 
-        /// <summary>Small scale punch on the score text (one merged popup).</summary>
-        public void PulseScore() => pulseTime = 0f;
+        /// <summary>Small scale punch on the score text (one merged popup; values from ScorePopupSettings).</summary>
+        public void PulseScore(float amount, float duration)
+        {
+            pulseAmount = amount;
+            pulseDuration = duration;
+            pulseTime = 0f;
+        }
 
         void Update()
         {

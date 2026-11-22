@@ -2136,13 +2136,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.ScorePopupLayer
   popupPrefab: {fileID: 1685869418334177621, guid: d1e08b29d51a088478179dbe4956241f, type: 3}
   prewarm: 10
-  fanRadius: 110
-  inwardFanRadius: 120
-  fanSpacing: 14
-  maxFanAngle: 110
-  maxRings: 4
-  minSideRoom: 200
-  screenMargin: 12
+  settings: {fileID: 11400000, guid: b8d22da8ed2250149af171dd3913b5cb, type: 2}
   visibleArea: {fileID: 0}
   avoid:
   - {fileID: 1149136182}

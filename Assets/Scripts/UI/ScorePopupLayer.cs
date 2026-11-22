@@ -25,41 +25,29 @@ namespace RoguelikePool
         [SerializeField] ScorePopup popupPrefab;
         [Tooltip("Popups créés d'avance dans le pool.")]
         [SerializeField] int prewarm = 10;
-        [Header("Éventail")]
-        [Tooltip("Rayon de l'éventail : distance entre la poche et les textes, vers l'extérieur de la table (unités du canvas).")]
-        [SerializeField] float fanRadius = 110f;
-        [Tooltip("Rayon de l'éventail quand les textes vont sur la table (poche du milieu sans place à l'extérieur).")]
-        [SerializeField] float inwardFanRadius = 120f;
-        [Tooltip("Espace minimal entre deux textes (unités du canvas). Couvre aussi le flottement.")]
-        [SerializeField] float fanSpacing = 14f;
-        [Tooltip("Angle maximal de l'éventail de chaque côté de sa direction (degrés).")]
-        [SerializeField] float maxFanAngle = 110f;
-        [Tooltip("Anneaux successifs quand l'arc est plein (chacun plus loin de la hauteur d'un texte).")]
-        [SerializeField] int maxRings = 4;
-        [Tooltip("Place minimale entre la poche et le bord du cadre, de son côté extérieur (unités du canvas). En dessous : poche de coin → textes au-dessus / en dessous d'elle, poche du milieu → textes sur la table.")]
-        [SerializeField] float minSideRoom = 200f;
-        [Tooltip("Marge entre le texte et le bord du cadre du jeu (Safe Area), unités du canvas.")]
-        [SerializeField] float screenMargin = 12f;
+        [Tooltip("Tous les réglages des textes de score (Assets/Data/ScorePopupSettings). Vide = valeurs par défaut du code.")]
+        [SerializeField] ScorePopupSettings settings;
         [Tooltip("Zone visible où les textes doivent rester (SafeArea). Vide = cherchée dans la scène, sinon tout l'écran.")]
         [SerializeField] RectTransform visibleArea;
         [Tooltip("Éléments d'interface que les textes ne doivent pas recouvrir (boutons, jauge, onglets, score, craies…).")]
         [SerializeField] List<RectTransform> avoid = new List<RectTransform>();
 
-        [Header("Attente et fusion")]
-        [Tooltip("Vitesse sous laquelle une boule compte comme immobile (unités/s). La fusion part quand toutes le sont.")]
-        [SerializeField] float stillSpeed = 0.5f;
-        [Tooltip("Délai maximal d'attente après le tir (s) : la fusion part même si des boules roulent encore.")]
-        [SerializeField] float maxWait = 12f;
-        [Tooltip("Durée totale maximale de la fusion (s) : le délai entre les textes raccourcit s'il y en a beaucoup.")]
-        [SerializeField] float mergeMaxDuration = 1f;
-        [Tooltip("Délai entre le départ de deux textes (s), s'il tient dans la durée maximale.")]
-        [SerializeField] float delayBetween = 0.15f;
-        [Tooltip("Durée du vol d'un texte jusqu'au score (s).")]
-        [SerializeField] float flightDuration = 0.4f;
-        [Tooltip("Courbe d'accélération du vol (0 → 1 en temps, 0 → 1 en distance). Par défaut : départ lent, arrivée rapide.")]
-        [SerializeField] AnimationCurve flightCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 0f), new Keyframe(1f, 1f, 2.2f, 2.2f));
-        [Tooltip("Échelle du texte à son arrivée sur le score (il rétrécit pendant le vol).")]
-        [SerializeField] float flightEndScale = 0.7f;
+        public ScorePopupSettings Settings => settings != null ? settings : ScorePopupSettings.Defaults;
+        // Read live from the settings asset (Inspector edits apply at once).
+        float fanRadius => Settings.fanRadius;
+        float inwardFanRadius => Settings.inwardFanRadius;
+        float fanSpacing => Settings.fanSpacing;
+        float maxFanAngle => Settings.maxFanAngle;
+        int maxRings => Settings.maxRings;
+        float minSideRoom => Settings.minSideRoom;
+        float screenMargin => Settings.screenMargin;
+        float stillSpeed => Settings.stillSpeed;
+        float maxWait => Settings.maxWait;
+        float mergeMaxDuration => Settings.mergeMaxDuration;
+        float delayBetween => Settings.delayBetween;
+        float flightDuration => Settings.flightDuration;
+        AnimationCurve flightCurve => Settings.flightCurve;
+        AnimationCurve flightScaleCurve => Settings.flightScaleCurve;
 
         /// <summary>Raised when a popup reaches the score, with its order in this merge (0, 1, 2…), e.g. for a rising sound.</summary>
         public event System.Action<int> PopupMerged;
@@ -133,6 +121,7 @@ namespace RoguelikePool
         {
             var popup = pool.Count > 0 ? pool.Pop() : Create();
             popup.Pocket = pocket;
+            popup.Settings = Settings;
             popup.transform.SetAsLastSibling(); // newest on top
             active.Add(popup);
             popup.Show(data); // sets the text first: its size decides the placement
@@ -344,7 +333,7 @@ namespace RoguelikePool
                 float u = Mathf.Clamp01(f.time / flightTime);
                 float e = flightCurve != null && flightCurve.length > 0 ? flightCurve.Evaluate(u) : u * u;
                 f.popup.Rect.anchoredPosition = Vector2.LerpUnclamped(f.from, target, e);
-                f.popup.transform.localScale = Vector3.one * Mathf.Lerp(1f, flightEndScale, u);
+                f.popup.transform.localScale = Vector3.one * (flightScaleCurve != null && flightScaleCurve.length > 0 ? flightScaleCurve.Evaluate(u) : 1f);
                 if (u >= 1f)
                 {
                     flights.RemoveAt(i--);
@@ -390,7 +379,7 @@ namespace RoguelikePool
         void Arrive(Flight f)
         {
             stages.AddDisplayedScore(f.popup.Data.points);
-            if (hud != null) hud.PulseScore();
+            if (hud != null) hud.PulseScore(Settings.scorePulseAmount, Settings.scorePulseDuration);
             Release(f.popup);
             PopupMerged?.Invoke(f.index);
         }
@@ -405,7 +394,7 @@ namespace RoguelikePool
             if (points > 0)
             {
                 stages.AddDisplayedScore(points);
-                if (hud != null) hud.PulseScore();
+                if (hud != null) hud.PulseScore(Settings.scorePulseAmount, Settings.scorePulseDuration);
             }
             CompleteMerge();
         }

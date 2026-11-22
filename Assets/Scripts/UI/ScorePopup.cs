@@ -9,7 +9,7 @@ namespace RoguelikePool
         public int points;
         /// <summary>Optional text replacing "+points" (empty = "+points" from <see cref="GameTexts.popupPointsFormat"/>).</summary>
         public string label;
-        /// <summary>Text color (alpha 0 = the prefab's color).</summary>
+        /// <summary>Text color (alpha 0 = the color of <see cref="ScorePopupSettings"/>).</summary>
         public Color color;
 
         public ScorePopupData(int points, string label = null, Color color = default)
@@ -23,26 +23,15 @@ namespace RoguelikePool
     /// <summary>
     /// One floating score text (prefab Assets/Prefabs/UI/ScorePopup, pooled by <see cref="ScorePopupLayer"/>).
     /// The root is placed by the layer; the <see cref="text"/> child pops in (scale 0 → overshoot → 1)
-    /// then floats forever: a slow vertical bob of a few pixels and a small random tilt.
+    /// then floats forever: a slow vertical bob of a few pixels and a small random tilt. All values come
+    /// from <see cref="ScorePopupSettings"/>.
     /// </summary>
     public class ScorePopup : MonoBehaviour
     {
         [SerializeField] TMP_Text text;
 
-        [Header("Apparition")]
-        [Tooltip("Durée du pop (échelle 0 → dépassement → 1), en secondes.")]
-        public float popDuration = 0.15f;
-        [Tooltip("Échelle maximale atteinte pendant le pop.")]
-        public float popOvershoot = 1.2f;
-
-        [Header("Flottement")]
-        [Tooltip("Amplitude du flottement vertical (unités du canvas, 2 = 1 pixel d'art).")]
-        public float floatAmplitude = 6f;
-        [Tooltip("Vitesse du flottement (oscillations par seconde).")]
-        public float floatSpeed = 0.8f;
-        [Tooltip("Inclinaison aléatoire maximale (degrés, ±).")]
-        public float maxTilt = 5f;
-
+        /// <summary>Set by the layer; every value (pop, float, size, color, outline) is read from it.</summary>
+        public ScorePopupSettings Settings { get; set; }
         public ScorePopupData Data { get; private set; }
         public RectTransform Rect => (RectTransform)transform;
         /// <summary>The pocket this popup belongs to (the layer keeps it next to that pocket).</summary>
@@ -52,9 +41,11 @@ namespace RoguelikePool
         /// <summary>Text size used for placement (set by the layer when shown).</summary>
         public Vector2 Size { get; set; }
 
+        ScorePopupSettings S => Settings != null ? Settings : ScorePopupSettings.Defaults;
+
         float age, phase, tilt;
-        Color defaultColor;
         bool initialized;
+        Material outlineMaterial;
 
         void Init()
         {
@@ -62,7 +53,11 @@ namespace RoguelikePool
             initialized = true;
             if (text == null) text = GetComponentInChildren<TMP_Text>(true);
             text.raycastTarget = false;
-            defaultColor = text.color;
+        }
+
+        void OnDestroy()
+        {
+            if (outlineMaterial != null) Destroy(outlineMaterial);
         }
 
         /// <summary>Size of the shown text (canvas units, at scale 1, without tilt).</summary>
@@ -81,18 +76,46 @@ namespace RoguelikePool
         public void Show(ScorePopupData data)
         {
             Init();
+            var s = S;
             Data = data;
             text.text = string.IsNullOrEmpty(data.label)
                 ? GameTexts.Format(GameTexts.Current.popupPointsFormat, data.points)
                 : data.label;
-            text.color = data.color.a > 0f ? data.color : defaultColor;
-            TextShadow.Fit(text);
+            text.fontSize = s.FontSizeFor(data.points);
+            text.color = data.color.a > 0f ? data.color : s.textColor;
+            ApplyOutline(s);
             age = 0f;
             transform.localScale = Vector3.one; // a pooled popup may come back shrunk by its flight
             phase = Random.value * Mathf.PI * 2f;
-            tilt = Random.Range(-maxTilt, maxTilt);
+            tilt = Random.Range(-s.maxTilt, s.maxTilt);
             gameObject.SetActive(true);
             Animate();
+        }
+
+        /// <summary>
+        /// No outline: the font's own material (with its drop shadow, or the shadowless preset for a dark
+        /// text). Outline: one material per popup, a copy of the font material with the outline on.
+        /// </summary>
+        void ApplyOutline(ScorePopupSettings s)
+        {
+            if (s.outlineWidth <= 0f || text.font == null)
+            {
+                if (text.font != null && text.fontSharedMaterial != text.font.material) text.fontSharedMaterial = text.font.material;
+                TextShadow.Fit(text);
+                return;
+            }
+            if (outlineMaterial == null)
+            {
+                outlineMaterial = new Material(text.font.material) { name = "ScorePopup Outline (instance)", hideFlags = HideFlags.DontSave };
+                outlineMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline);
+            }
+            // TMP centers the outline on the glyph edge: its inner half would eat the thin pixel strokes.
+            // Dilating the face by the same amount keeps the whole outline outside the letters.
+            outlineMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, s.outlineWidth);
+            outlineMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, s.outlineWidth);
+            outlineMaterial.SetColor(ShaderUtilities.ID_OutlineColor, s.outlineColor);
+            ShaderUtilities.UpdateShaderRatios(outlineMaterial);
+            if (text.fontSharedMaterial != outlineMaterial) text.fontSharedMaterial = outlineMaterial;
         }
 
         void Update()
@@ -103,21 +126,15 @@ namespace RoguelikePool
 
         void Animate()
         {
+            var s = S;
             var t = text.rectTransform;
-            t.localScale = Vector3.one * PopScale(age / Mathf.Max(popDuration, 0.0001f));
-            float bob = Mathf.Sin(age * floatSpeed * Mathf.PI * 2f + phase) * floatAmplitude;
+            float u = age / Mathf.Max(s.popDuration, 0.0001f);
+            float scale = u >= 1f || s.popCurve == null || s.popCurve.length == 0 ? 1f : s.popCurve.Evaluate(u);
+            t.localScale = Vector3.one * scale;
+            float bob = Mathf.Sin(age * s.floatSpeed * Mathf.PI * 2f + phase) * s.floatAmplitude;
             t.anchoredPosition = new Vector2(0f, bob);
             // The tilt sways a little around its random angle.
-            t.localRotation = Quaternion.Euler(0f, 0f, tilt + Mathf.Sin(age * floatSpeed * Mathf.PI + phase) * 1.5f);
-        }
-
-        /// <summary>0 → overshoot over the first 60 %, overshoot → 1 over the rest, then 1.</summary>
-        float PopScale(float u)
-        {
-            if (u >= 1f) return 1f;
-            const float peak = 0.6f;
-            if (u < peak) return Mathf.SmoothStep(0f, popOvershoot, u / peak);
-            return Mathf.SmoothStep(popOvershoot, 1f, (u - peak) / (1f - peak));
+            t.localRotation = Quaternion.Euler(0f, 0f, tilt + Mathf.Sin(age * s.floatSpeed * Mathf.PI + phase) * s.tiltSway);
         }
     }
 }
