@@ -33,6 +33,29 @@ namespace RoguelikePool
         [Tooltip("Tirs restants au dernier tir.")]
         [SerializeField] Color shotsDangerColor = new Color32(0xff, 0x6a, 0x4a, 0xff);
 
+        [Header("Pulsation du score (fusion des textes)")]
+        [Tooltip("Agrandissement maximal du texte du score à chaque texte fusionné (0,2 = +20 %).")]
+        [SerializeField] float pulseAmount = 0.2f;
+        [Tooltip("Durée d'une pulsation, en secondes.")]
+        [SerializeField] float pulseDuration = 0.15f;
+
+        /// <summary>The "score / target" text: where the score popups fly to.</summary>
+        public RectTransform ScoreText => scoreValue != null ? scoreValue.rectTransform : null;
+
+        float pulseTime = -1f;
+
+        /// <summary>Small scale punch on the score text (one merged popup).</summary>
+        public void PulseScore() => pulseTime = 0f;
+
+        void Update()
+        {
+            if (pulseTime < 0f || scoreValue == null) return;
+            pulseTime += Time.deltaTime;
+            float u = pulseTime / Mathf.Max(pulseDuration, 0.0001f);
+            if (u >= 1f) { pulseTime = -1f; u = 1f; }
+            scoreValue.rectTransform.localScale = Vector3.one * (1f + pulseAmount * Mathf.Sin(u * Mathf.PI));
+        }
+
         const int Margin = 10;
         static readonly Color32 Plate = PixelArt.Hex("0c0a14");
         static readonly Color32[] Brass = PixelArt.Palette("3a2412", "6e4a1e", "a8742a", "d9a441", "f5d37a");

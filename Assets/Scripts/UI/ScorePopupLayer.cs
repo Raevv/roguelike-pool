@@ -8,6 +8,11 @@ namespace RoguelikePool
     /// texts. Listens to <see cref="StageManager.BallPocketed"/> and shows a <see cref="ScorePopup"/> next
     /// to the pocket. Popups are pooled (inactive children, reused).
     ///
+    /// Merge: after a shot, once every ball is slower than <see cref="stillSpeed"/> (or after
+    /// <see cref="maxWait"/>), the popups fly one by one to the score text; each arrival adds its points to
+    /// <see cref="StageManager.DisplayedScore"/>, pulses the score and raises <see cref="PopupMerged"/>.
+    /// A tap during the merge adds everything at once. A scratch removes the shot's popups.
+    ///
     /// Positions: pocket world position → real screen pixels with <see cref="PixelCameraRig.WorldToScreen"/>
     /// (the project's WorldToScreenPoint: the world is drawn into a low-res texture, so Camera.WorldToScreenPoint
     /// alone would be wrong) → layer coordinates with RectTransformUtility, using the canvas camera
@@ -40,8 +45,34 @@ namespace RoguelikePool
         [Tooltip("Éléments d'interface que les textes ne doivent pas recouvrir (boutons, jauge, onglets, score, craies…).")]
         [SerializeField] List<RectTransform> avoid = new List<RectTransform>();
 
+        [Header("Attente et fusion")]
+        [Tooltip("Vitesse sous laquelle une boule compte comme immobile (unités/s). La fusion part quand toutes le sont.")]
+        [SerializeField] float stillSpeed = 0.5f;
+        [Tooltip("Délai maximal d'attente après le tir (s) : la fusion part même si des boules roulent encore.")]
+        [SerializeField] float maxWait = 12f;
+        [Tooltip("Durée totale maximale de la fusion (s) : le délai entre les textes raccourcit s'il y en a beaucoup.")]
+        [SerializeField] float mergeMaxDuration = 1f;
+        [Tooltip("Délai entre le départ de deux textes (s), s'il tient dans la durée maximale.")]
+        [SerializeField] float delayBetween = 0.15f;
+        [Tooltip("Durée du vol d'un texte jusqu'au score (s).")]
+        [SerializeField] float flightDuration = 0.4f;
+        [Tooltip("Courbe d'accélération du vol (0 → 1 en temps, 0 → 1 en distance). Par défaut : départ lent, arrivée rapide.")]
+        [SerializeField] AnimationCurve flightCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 0f), new Keyframe(1f, 1f, 2.2f, 2.2f));
+        [Tooltip("Échelle du texte à son arrivée sur le score (il rétrécit pendant le vol).")]
+        [SerializeField] float flightEndScale = 0.7f;
+
+        /// <summary>Raised when a popup reaches the score, with its order in this merge (0, 1, 2…), e.g. for a rising sound.</summary>
+        public event System.Action<int> PopupMerged;
+        public bool IsWaiting => waiting;
+        public bool IsMerging => merging;
+
         readonly List<ScorePopup> active = new List<ScorePopup>();
         readonly Stack<ScorePopup> pool = new Stack<ScorePopup>();
+        readonly List<Flight> flights = new List<Flight>();
+        bool waiting, merging;
+        float waitTime, launchTimer, launchDelay, flightTime;
+        int mergeIndex;
+        StageHUD hud;
         StageManager stages;
         TableRules rules;
         PoolTable table;
@@ -51,11 +82,12 @@ namespace RoguelikePool
         public IReadOnlyList<ScorePopup> Active => active;
         RectTransform Layer => (RectTransform)transform;
 
-        public void Init(StageManager stageManager, TableRules tableRules, PoolTable poolTable)
+        public void Init(StageManager stageManager, TableRules tableRules, PoolTable poolTable, StageHUD stageHUD)
         {
             stages = stageManager;
             rules = tableRules;
             table = poolTable;
+            hud = stageHUD;
             canvas = GetComponentInParent<Canvas>().rootCanvas;
             if (visibleArea == null)
             {
@@ -64,15 +96,14 @@ namespace RoguelikePool
             }
             for (int i = pool.Count + active.Count; i < prewarm; i++) pool.Push(Create());
             stages.BallPocketed += OnBallPocketed;
-            // Provisional until the merge (step 4): popups leave when the shot ends, and a scratch removes them.
-            stages.ShotEnded += Clear;
-            rules.ShotCancelled += Clear;
+            rules.ShotTaken += OnShotTaken;
+            rules.ShotCancelled += Clear; // a scratch cancels the shot's points: its popups go away
         }
 
         void OnDestroy()
         {
-            if (stages != null) { stages.BallPocketed -= OnBallPocketed; stages.ShotEnded -= Clear; }
-            if (rules != null) rules.ShotCancelled -= Clear;
+            if (stages != null) stages.BallPocketed -= OnBallPocketed;
+            if (rules != null) { rules.ShotTaken -= OnShotTaken; rules.ShotCancelled -= Clear; }
         }
 
         void OnBallPocketed(Ball ball, Pocket pocket, int points) => Spawn(pocket, new ScorePopupData(points));
@@ -88,6 +119,9 @@ namespace RoguelikePool
             popup.Size = popup.TextSize;
             popup.Offset = ChooseOffset(popup);
             Place(popup);
+            // Pocketed outside a shot's wait (after a merge started on the max delay, or a debug spawn):
+            // it merges once the balls are still again. During a merge it simply joins the queue.
+            if (!waiting && !merging) StartWaiting();
             return popup;
         }
 
@@ -221,6 +255,136 @@ namespace RoguelikePool
         {
             foreach (var popup in active) Release(popup);
             active.Clear();
+            foreach (var flight in flights) Release(flight.popup);
+            flights.Clear();
+            merging = false;
+        }
+
+        // ------------------------------------------------------------------ waiting and merge
+
+        struct Flight
+        {
+            public ScorePopup popup;
+            public Vector2 from;
+            public float time;
+            public int index;
+        }
+
+        void OnShotTaken()
+        {
+            if (merging) FinishNow(); // never two merges at once
+            StartWaiting();
+        }
+
+        void StartWaiting()
+        {
+            waiting = true;
+            waitTime = 0f;
+        }
+
+        void Update()
+        {
+            if (waiting)
+            {
+                waitTime += Time.deltaTime;
+                // The strike lands a few frames after the shot is confirmed: wait a moment before trusting "still".
+                bool still = waitTime >= 0.25f && AllBallsStill();
+                if (!rules.Rewinding && (still || waitTime >= maxWait))
+                {
+                    waiting = false;
+                    StartMerge();
+                }
+            }
+            if (!merging) return;
+
+            var pointer = UnityEngine.InputSystem.Pointer.current;
+            if (pointer != null && pointer.press.wasPressedThisFrame) { FinishNow(); return; }
+
+            launchTimer -= Time.deltaTime;
+            while (launchTimer <= 0f && active.Count > 0)
+            {
+                Launch(active[0]);
+                launchTimer += launchDelay;
+            }
+
+            Vector2 target = ScoreTarget();
+            for (int i = 0; i < flights.Count; i++)
+            {
+                var f = flights[i];
+                f.time += Time.deltaTime;
+                float u = Mathf.Clamp01(f.time / flightTime);
+                float e = flightCurve != null && flightCurve.length > 0 ? flightCurve.Evaluate(u) : u * u;
+                f.popup.Rect.anchoredPosition = Vector2.LerpUnclamped(f.from, target, e);
+                f.popup.transform.localScale = Vector3.one * Mathf.Lerp(1f, flightEndScale, u);
+                if (u >= 1f)
+                {
+                    flights.RemoveAt(i--);
+                    Arrive(f);
+                    continue;
+                }
+                flights[i] = f;
+            }
+            if (active.Count == 0 && flights.Count == 0) merging = false;
+        }
+
+        /// <summary>Every ball on the table is slower than <see cref="stillSpeed"/>.</summary>
+        bool AllBallsStill()
+        {
+            float max2 = stillSpeed * stillSpeed;
+            foreach (var ball in Ball.All)
+                if (!ball.IsPocketed && ball.Body.linearVelocity.sqrMagnitude > max2) return false;
+            return true;
+        }
+
+        /// <summary>
+        /// Starts sending the popups to the score, oldest first. Each flight lasts <see cref="flightDuration"/>;
+        /// the delay between two launches is <see cref="delayBetween"/>, shortened so the whole merge never
+        /// lasts more than <see cref="mergeMaxDuration"/>.
+        /// </summary>
+        public void StartMerge()
+        {
+            int n = active.Count;
+            if (n == 0) return;
+            flightTime = Mathf.Max(0.01f, Mathf.Min(flightDuration, mergeMaxDuration));
+            launchDelay = n > 1 ? Mathf.Max(0f, Mathf.Min(delayBetween, (mergeMaxDuration - flightTime) / (n - 1))) : 0f;
+            launchTimer = 0f;
+            mergeIndex = 0;
+            merging = true;
+        }
+
+        void Launch(ScorePopup popup)
+        {
+            active.Remove(popup);
+            flights.Add(new Flight { popup = popup, from = popup.Rect.anchoredPosition, index = mergeIndex++ });
+        }
+
+        void Arrive(Flight f)
+        {
+            stages.AddDisplayedScore(f.popup.Data.points);
+            if (hud != null) hud.PulseScore();
+            Release(f.popup);
+            PopupMerged?.Invoke(f.index);
+        }
+
+        /// <summary>A tap during the merge: every remaining popup is added at once.</summary>
+        public void FinishNow()
+        {
+            int points = 0;
+            foreach (var popup in active) points += popup.Data.points;
+            foreach (var flight in flights) points += flight.popup.Data.points;
+            Clear();
+            if (points > 0)
+            {
+                stages.AddDisplayedScore(points);
+                if (hud != null) hud.PulseScore();
+            }
+        }
+
+        /// <summary>Center of the "score / target" text, in layer coordinates.</summary>
+        Vector2 ScoreTarget()
+        {
+            var text = hud != null ? hud.ScoreText : null;
+            return text != null ? ToLayerRect(text).center : new Vector2(0f, Layer.rect.height * 0.4f);
         }
 
         public void Release(ScorePopup popup)

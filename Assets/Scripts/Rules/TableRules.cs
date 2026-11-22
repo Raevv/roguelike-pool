@@ -18,6 +18,9 @@ namespace RoguelikePool
         /// <summary>True while a cancelled shot is being rewound, or while <see cref="Locked"/>: shooting is blocked.</summary>
         public bool Busy => rewinding || Locked;
 
+        /// <summary>True while a scratched shot is being rewound.</summary>
+        public bool Rewinding => rewinding;
+
         /// <summary>Set by the stage flow to forbid shooting (stage won or lost).</summary>
         public bool Locked { get; set; }
 

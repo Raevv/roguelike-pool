@@ -168,6 +168,7 @@ namespace RoguelikePool
             Debug.Log($"[Stage] Blanche empochée : tir annulé, {shotPoints} point(s) retiré(s)" +
                       (scratchCostsShot ? ", le tir compte quand même." : ", le tir est rendu."));
             shotPoints = 0;
+            displayedScore = Mathf.Min(displayedScore, score); // in case points of that shot were already merged
             if (!scratchCostsShot) shotsLeft++;
             Refresh();
         }
@@ -186,8 +187,8 @@ namespace RoguelikePool
         {
             shotInProgress = false;
             ShotEnded?.Invoke();
-            // Temporary (step 1 of the score popups): no merge animation yet, so the HUD catches up here.
-            SyncDisplayedScore();
+            // Normally the score popups' merge raises the displayed score; without them, catch up here.
+            if (BallPocketed == null) SyncDisplayedScore();
             Debug.Log($"[Stage] Tir terminé : +{shotPoints} point(s), score {score}/{Target}, tirs restants {shotsLeft}/{MaxShots}.");
             if (score >= Target)
             {

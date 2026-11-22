@@ -88,6 +88,7 @@ namespace RoguelikePool
             text.color = data.color.a > 0f ? data.color : defaultColor;
             TextShadow.Fit(text);
             age = 0f;
+            transform.localScale = Vector3.one; // a pooled popup may come back shrunk by its flight
             phase = Random.value * Mathf.PI * 2f;
             tilt = Random.Range(-maxTilt, maxTilt);
             gameObject.SetActive(true);

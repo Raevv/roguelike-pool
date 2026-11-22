@@ -108,7 +108,7 @@ namespace RoguelikePool
                 if (counter != null) counter.Init(stages);
                 else Debug.LogWarning("GameBootstrap : aucun ShotsCounter dans la scène.");
                 var popups = scorePopups != null ? scorePopups : FindAnyObjectByType<ScorePopupLayer>(FindObjectsInactive.Include);
-                if (popups != null) popups.Init(stages, rules, table);
+                if (popups != null) popups.Init(stages, rules, table, hud);
                 else Debug.LogWarning("GameBootstrap : aucun PopupLayer (ScorePopupLayer) dans la scène.");
             }
             else
