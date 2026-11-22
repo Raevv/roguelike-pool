@@ -63,6 +63,16 @@ namespace RoguelikePool
             defaultColor = text.color;
         }
 
+        /// <summary>Size of the shown text (canvas units, at scale 1, without tilt).</summary>
+        public Vector2 TextSize
+        {
+            get
+            {
+                Init();
+                return text.GetPreferredValues(text.text);
+            }
+        }
+
         public void Show(ScorePopupData data)
         {
             Init();
