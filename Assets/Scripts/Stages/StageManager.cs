@@ -48,6 +48,8 @@ namespace RoguelikePool
         public event Action<Ball, Pocket, int> BallPocketed;
         /// <summary>Raised once per shot when every ball is still and no scratch rewind runs.</summary>
         public event Action ShotEnded;
+        /// <summary>Raised at every stage start (first stage, next stage, restart), after the reset.</summary>
+        public event Action StageStarted;
 
         public StageCatalog Catalog { get; private set; }
         /// <summary>0-based index of the current stage in the catalog.</summary>
@@ -118,6 +120,7 @@ namespace RoguelikePool
             ResetBalls();
             Debug.Log($"[Stage] Stage {StageNumber}/{StageCount} : {Target} points en {MaxShots} tirs.");
             Refresh();
+            StageStarted?.Invoke();
         }
 
         /// <summary>Puts every ball back at its starting position, at rest (pocketed balls come back too).</summary>
@@ -177,9 +180,18 @@ namespace RoguelikePool
         {
             if (!shotInProgress) return;
             shotTime += Time.deltaTime;
-            // The strike lands a few frames after ShotTaken (cue animation), so wait a moment before
-            // trusting "all stopped"; a scratch rewind (rules.Busy) also keeps the shot open.
-            if (shotTime < 0.25f || rules.Busy || !Ball.AllStopped) return;
+            TryEndShot();
+        }
+
+        /// <summary>
+        /// Ends the shot (and checks victory / defeat) if it is over: every ball still, no scratch rewind
+        /// and no score merge running (both are part of rules.Busy). Called every frame and by the score
+        /// popups' ScoreMergeCompleted, so the check runs right after the merge, never before.
+        /// </summary>
+        public void TryEndShot()
+        {
+            // The strike lands a few frames after ShotTaken (cue animation), so wait a moment before trusting "all stopped".
+            if (!shotInProgress || shotTime < 0.25f || rules.Busy || !Ball.AllStopped) return;
             EndShot();
         }
 

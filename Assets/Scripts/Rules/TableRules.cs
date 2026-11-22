@@ -16,7 +16,13 @@ namespace RoguelikePool
         public float restoreDelay = 0.9f;
 
         /// <summary>True while a cancelled shot is being rewound, or while <see cref="Locked"/>: shooting is blocked.</summary>
-        public bool Busy => rewinding || Locked;
+        public bool Busy => rewinding || Locked || ScoreMergeBusy;
+
+        /// <summary>
+        /// Set by the score popups while they wait for the balls and merge into the score: the next shot
+        /// (and the end-of-shot victory / defeat check) waits for the merge to finish.
+        /// </summary>
+        public bool ScoreMergeBusy { get; set; }
 
         /// <summary>True while a scratched shot is being rewound.</summary>
         public bool Rewinding => rewinding;

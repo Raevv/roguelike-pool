@@ -63,6 +63,11 @@ namespace RoguelikePool
 
         /// <summary>Raised when a popup reaches the score, with its order in this merge (0, 1, 2…), e.g. for a rising sound.</summary>
         public event System.Action<int> PopupMerged;
+        /// <summary>
+        /// Raised when the merge is over (also with nothing to merge, or after a tap). It frees the next
+        /// shot and runs the stage's victory / defeat check (<see cref="StageManager.TryEndShot"/>).
+        /// </summary>
+        public event System.Action ScoreMergeCompleted;
         public bool IsWaiting => waiting;
         public bool IsMerging => merging;
 
@@ -96,14 +101,29 @@ namespace RoguelikePool
             }
             for (int i = pool.Count + active.Count; i < prewarm; i++) pool.Push(Create());
             stages.BallPocketed += OnBallPocketed;
+            stages.StageStarted += ResetAll;
             rules.ShotTaken += OnShotTaken;
             rules.ShotCancelled += Clear; // a scratch cancels the shot's points: its popups go away
+            ScoreMergeCompleted += stages.TryEndShot;
         }
 
         void OnDestroy()
         {
-            if (stages != null) stages.BallPocketed -= OnBallPocketed;
+            if (stages != null)
+            {
+                stages.BallPocketed -= OnBallPocketed;
+                stages.StageStarted -= ResetAll;
+                ScoreMergeCompleted -= stages.TryEndShot;
+            }
             if (rules != null) { rules.ShotTaken -= OnShotTaken; rules.ShotCancelled -= Clear; }
+        }
+
+        /// <summary>Stage start or restart: every popup back in the pool, no wait, no merge, shooting free.</summary>
+        public void ResetAll()
+        {
+            Clear();
+            waiting = false;
+            if (rules != null) rules.ScoreMergeBusy = false;
         }
 
         void OnBallPocketed(Ball ball, Pocket pocket, int points) => Spawn(pocket, new ScorePopupData(points));
@@ -280,6 +300,15 @@ namespace RoguelikePool
         {
             waiting = true;
             waitTime = 0f;
+            rules.ScoreMergeBusy = true;
+        }
+
+        void CompleteMerge()
+        {
+            merging = false;
+            if (waiting) return; // more popups arrived meanwhile: another merge follows
+            rules.ScoreMergeBusy = false;
+            ScoreMergeCompleted?.Invoke();
         }
 
         void Update()
@@ -324,7 +353,7 @@ namespace RoguelikePool
                 }
                 flights[i] = f;
             }
-            if (active.Count == 0 && flights.Count == 0) merging = false;
+            if (active.Count == 0 && flights.Count == 0) CompleteMerge();
         }
 
         /// <summary>Every ball on the table is slower than <see cref="stillSpeed"/>.</summary>
@@ -344,7 +373,7 @@ namespace RoguelikePool
         public void StartMerge()
         {
             int n = active.Count;
-            if (n == 0) return;
+            if (n == 0) { CompleteMerge(); return; } // nothing to merge: done at once
             flightTime = Mathf.Max(0.01f, Mathf.Min(flightDuration, mergeMaxDuration));
             launchDelay = n > 1 ? Mathf.Max(0f, Mathf.Min(delayBetween, (mergeMaxDuration - flightTime) / (n - 1))) : 0f;
             launchTimer = 0f;
@@ -378,6 +407,7 @@ namespace RoguelikePool
                 stages.AddDisplayedScore(points);
                 if (hud != null) hud.PulseScore();
             }
+            CompleteMerge();
         }
 
         /// <summary>Center of the "score / target" text, in layer coordinates.</summary>

@@ -32,6 +32,8 @@ public static class MergeTest
         int scoreBefore = stages.Score;
         float t0 = Time.time, mergeStart = -1f, mergeEnd = -1f, stopped = -1f;
         int merged = 0, maxPopups = 0, displayedWhileRolling = -1;
+        float stateAt = -1f; bool busyDuringMerge = true, busyAfter = true;
+        var rules = Object.FindAnyObjectByType<TableRules>();
         System.Action<int> onMerged = i => { merged++; log += $"merged#{i}@{Time.time - t0:F2}s disp={stages.DisplayedScore}; "; };
         layer.PopupMerged += onMerged;
         bool tapped = false;
@@ -53,14 +55,17 @@ public static class MergeTest
                 InputSystem.QueueStateEvent(mouse, new MouseState { position = pos, buttons = 0 });
                 log += $"TAP@{Time.time - t0:F2}s; ";
             }
+            if (stateAt < 0f && stages.CurrentState != StageManager.State.Playing) stateAt = Time.time - t0;
+            if (layer.IsMerging && !rules.Busy) busyDuringMerge = false;
             if (mergeStart >= 0f && mergeEnd < 0f && !layer.IsMerging) mergeEnd = Time.time - t0;
+            if (mergeEnd >= 0f) busyAfter = rules.Busy;
             if (mergeEnd >= 0f && Time.time - t0 > mergeEnd + 0.3f) break;
             if (stopped >= 0f && mergeStart < 0f && Time.time - t0 > stopped + 2f) break; // nothing to merge
         }
         layer.PopupMerged -= onMerged;
         return $"score {scoreBefore}->{stages.Score} displayed={stages.DisplayedScore} displayedWhileRolling={displayedWhileRolling} " +
                $"maxPopups={maxPopups} stopped@{stopped:F2}s mergeStart@{mergeStart:F2}s mergeEnd@{mergeEnd:F2}s " +
-               $"(merge {(mergeEnd - mergeStart):F2}s) mergedEvents={merged} state={stages.CurrentState} | {log}";
+               $"(merge {(mergeEnd - mergeStart):F2}s) mergedEvents={merged} state={stages.CurrentState}@{stateAt:F2}s busyDuringMerge={busyDuringMerge} busyAfterMerge={busyAfter} shots={stages.ShotsLeft} | {log}";
     }
 }
 
@@ -97,5 +102,30 @@ public static class MergeCapTest
         }
         layer.PopupMerged -= onMerged;
         return $"n={n} waitBeforeMerge={start - t0:F2}s merge={end - start:F2}s mergedEvents={merged} displayed={stages.DisplayedScore}/{stages.Score} active={layer.Active.Count} {log}";
+    }
+}
+
+public static class MergeResetTest
+{
+    /// <summary>Popups on screen (some flying), then RestartRun: everything must be back to zero and shooting free.</summary>
+    public static async Task<string> Run()
+    {
+        var stages = Object.FindAnyObjectByType<StageManager>();
+        var layer = Object.FindAnyObjectByType<ScorePopupLayer>();
+        var rules = Object.FindAnyObjectByType<TableRules>();
+        stages.RestartRun();
+        await Task.Delay(200);
+        typeof(StageManager).GetField("score", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(stages, 6);
+        foreach (var p in Pocket.Active) layer.Spawn(p, new ScorePopupData(1));
+        string before = $"before: active={layer.Active.Count} waiting={layer.IsWaiting} busy={rules.Busy}";
+        float t0 = Time.time;
+        while (!layer.IsMerging && Time.time - t0 < 3f) await Task.Yield();
+        await Task.Delay(450); // mid-merge
+        string mid = $"mid: merging={layer.IsMerging} displayed={stages.DisplayedScore}";
+        stages.RestartRun();
+        await Task.Yield();
+        int visible = 0;
+        foreach (Transform c in layer.transform) if (c.gameObject.activeSelf) visible++;
+        return $"{before} | {mid} | after restart: active={layer.Active.Count} visible={visible} waiting={layer.IsWaiting} merging={layer.IsMerging} busy={rules.Busy} displayed={stages.DisplayedScore} score={stages.Score} state={stages.CurrentState}";
     }
 }
