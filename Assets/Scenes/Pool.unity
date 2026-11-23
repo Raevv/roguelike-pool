@@ -1414,6 +1414,7 @@ MonoBehaviour:
   line2: {fileID: 1297587843}
   button: {fileID: 421912116}
   buttonLabel: {fileID: 163751054}
+  showDelay: 1
   victoryTitleColor: {r: 0.9607843, g: 0.78431374, b: 0.41568628, a: 1}
   defeatTitleColor: {r: 1, g: 0.41568628, b: 0.2901961, a: 1}
   goldButtonLabelColor: {r: 0.16470589, g: 0.078431375, b: 0.03137255, a: 1}
@@ -2082,7 +2083,7 @@ MonoBehaviour:
   marginRight: 0
   marginTop: 0
   marginBottom: 0
-  verticalAlignment: 0.405
+  verticalAlignment: 0.9
   horizontalAlignment: 0.5
   gizmoColor: {r: 0.1, g: 1, b: 0.4, a: 0.9}
 --- !u!1 &594010172
@@ -2148,6 +2149,9 @@ MonoBehaviour:
   - {fileID: 2118220840}
   - {fileID: 995013225}
   - {fileID: 1066925585}
+  simulateInterval: 0.2
+  simulateHold: 1.5
+  simulateMaxPoints: 3
 --- !u!225 &594010175
 CanvasGroup:
   m_ObjectHideFlags: 0

@@ -112,9 +112,9 @@ MonoBehaviour:
     m_RotationOrder: 4
   scorePulseAmount: 0.2
   scorePulseDuration: 0.15
-  fontSize: 76
+  fontSize: 80
   fontSizePerPoint: 19
   maxFontSize: 114
   textColor: {r: 1, g: 1, b: 1, a: 1}
   outlineColor: {r: 0.078431375, g: 0.047058824, b: 0.10980392, a: 1}
-  outlineWidth: 0
+  outlineWidth: 0.25
