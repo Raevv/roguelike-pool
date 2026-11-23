@@ -45,6 +45,11 @@ namespace RoguelikePool
         [Header("Empochage")]
         public float fallDuration = 0.18f;
 
+        [Header("Visuel")]
+        [Tooltip("Faux (par défaut) : le sprite (enfant Visual) reste toujours droit, le numéro reste lisible.\n" +
+                 "Vrai : le sprite suit la rotation de la bille. Note : le Rigidbody2D a Freeze Rotation, donc pour l'instant les billes ne tournent jamais.")]
+        public bool rotateVisual = false;
+
         /// <summary>Physics layer of the cue ball (unnamed user layer). Cue-only jaw guards exclude every other layer.</summary>
         public const int CueLayer = 6;
 
@@ -150,6 +155,15 @@ namespace RoguelikePool
                 return;
             }
             Body.linearVelocity = v * (newSpeed / speed);
+        }
+
+        void LateUpdate()
+        {
+            // Keep the number upright whatever the body's rotation, unless rotateVisual is on.
+            var v = Visual;
+            if (v == null) return;
+            if (rotateVisual) v.transform.localRotation = Quaternion.identity; // follows the ball
+            else v.transform.rotation = Quaternion.identity;                   // stays upright in the world
         }
 
         void OnCollisionEnter2D(Collision2D collision)
