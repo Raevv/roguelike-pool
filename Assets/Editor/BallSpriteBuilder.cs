@@ -106,6 +106,41 @@ namespace RoguelikePool.EditorTools
             return log.ToString();
         }
 
+        public const string RackSetupPath = "Assets/Data/RackSetup.asset";
+
+        /// <summary>Default triangle: 1 at the apex, 8 in the center, a solid (5) and a stripe (10) in the back corners.</summary>
+        static readonly int[] DefaultRack = { 1, 2, 9, 3, 8, 4, 5, 6, 7, 10 };
+
+        /// <summary>Creates the RackSetup asset if missing, then assigns the prefabs and the RackSetup to GameBootstrap and saves the scene.</summary>
+        [MenuItem("Tools/Roguelike Pool/Balls/4 RackSetup + assign to GameBootstrap")]
+        public static string AssignToBootstrap()
+        {
+            var log = new System.Text.StringBuilder();
+            var setup = AssetDatabase.LoadAssetAtPath<RackSetup>(RackSetupPath);
+            if (setup == null)
+            {
+                setup = ScriptableObject.CreateInstance<RackSetup>();
+                setup.spots.Clear();
+                foreach (int n in DefaultRack) setup.spots.Add(AssetDatabase.LoadAssetAtPath<BallData>(DataPath(n)));
+                AssetDatabase.CreateAsset(setup, RackSetupPath);
+                AssetDatabase.SaveAssets();
+                log.AppendLine("créé " + RackSetupPath);
+            }
+
+            var boot = Object.FindAnyObjectByType<GameBootstrap>();
+            if (boot == null) return log + "Aucun GameBootstrap dans la scène ouverte.";
+            var so = new SerializedObject(boot);
+            so.FindProperty("ballPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(BallPrefabPath);
+            so.FindProperty("cueBallPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(CueBallPrefabPath);
+            so.FindProperty("rackSetup").objectReferenceValue = setup;
+            so.ApplyModifiedProperties();
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(boot.gameObject.scene);
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(boot.gameObject.scene);
+            log.AppendLine("GameBootstrap : prefabs et RackSetup assignés, scène sauvegardée.");
+            Debug.Log("[BallSprites] " + log);
+            return log.ToString();
+        }
+
         [MenuItem("Tools/Roguelike Pool/Balls/2 Build Ball + CueBall prefabs")]
         public static string BuildPrefabs()
         {

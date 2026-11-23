@@ -20,6 +20,13 @@ namespace RoguelikePool
         public PoolTable tablePrefab;
         [Tooltip("Prefab de la queue (Assets/Prefabs/Cue), instancié si la scène ne contient pas déjà une queue.")]
         public CueStick cuePrefab;
+        [Header("Billes")]
+        [Tooltip("Prefab des billes de couleur (Assets/Prefabs/Balls/Ball) : physique + enfant Visual.")]
+        public GameObject ballPrefab;
+        [Tooltip("Prefab de la blanche (Assets/Prefabs/Balls/CueBall, variante de Ball).")]
+        public GameObject cueBallPrefab;
+        [Tooltip("Quelle bille sur chaque position du triangle (Assets/Data/RackSetup).")]
+        public RackSetup rackSetup;
         [Header("Interface (objets de la scène, Tools > Roguelike Pool > 8 Build UI)")]
         public ShotUI shotUI;
         public StageHUD stageHUD;
@@ -72,8 +79,13 @@ namespace RoguelikePool
             new GameObject("ImpactFX").AddComponent<ImpactFX>();
             AmbientMotes.Create(table);
 
-            var cueBall = BallFactory.CreateCue(table.HeadSpot);
-            BallFactory.CreateRack(table.FootSpot);
+            if (ballPrefab == null || cueBallPrefab == null || rackSetup == null)
+            {
+                Debug.LogError("GameBootstrap : Ball Prefab, Cue Ball Prefab ou Rack Setup non assigné (Tools > Roguelike Pool > Balls > 4).");
+                return;
+            }
+            var cueBall = BallFactory.CreateCue(cueBallPrefab, table.HeadSpot);
+            BallFactory.CreateRack(ballPrefab, rackSetup, table.FootSpot);
 
             var preview = new GameObject("TrajectoryPreview").AddComponent<TrajectoryPreview>();
 

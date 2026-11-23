@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 225c80893d73fa04bb02649d9e6498a7, type: 3}
+  m_Name: RackSetup
+  m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.RackSetup
+  spots:
+  - {fileID: 11400000, guid: c1f0c4bae33b332419c2e5eec639d055, type: 2}
+  - {fileID: 11400000, guid: 83e6f87ff9737b148905354fe00766c5, type: 2}
+  - {fileID: 11400000, guid: 30ab414a1b0bd8049bb799d2e25e1232, type: 2}
+  - {fileID: 11400000, guid: edec9622063d1914da2952f6869a1a46, type: 2}
+  - {fileID: 11400000, guid: 42478bea2e6ec8c4698773306ce061c2, type: 2}
+  - {fileID: 11400000, guid: f2dc6f0caea660147886f4f7c1691f60, type: 2}
+  - {fileID: 11400000, guid: 785f50188bba4404eb2f22ec88f5a151, type: 2}
+  - {fileID: 11400000, guid: 2792fe04d163953458102c755f03fb2d, type: 2}
+  - {fileID: 11400000, guid: 93d592875b1da9e48ae1910b9ddae82b, type: 2}
+  - {fileID: 11400000, guid: 739ddc57173b9bc4883ed2bf7493ae81, type: 2}

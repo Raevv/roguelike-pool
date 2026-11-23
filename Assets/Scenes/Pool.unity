@@ -6875,6 +6875,9 @@ MonoBehaviour:
   ballPhysics: {fileID: 11400000, guid: 997383785f688314cb83bb4c2350e601, type: 2}
   tablePrefab: {fileID: 5398086280292132577, guid: 607101639f5ca59419427c40f241541e, type: 3}
   cuePrefab: {fileID: 1975489942506755787, guid: e6618bea52042f941a63c14321ea2a2a, type: 3}
+  ballPrefab: {fileID: 3530450239261706523, guid: c3a61022abc22dc43adba9284297ccc8, type: 3}
+  cueBallPrefab: {fileID: 6018956484178748573, guid: da64e415d585bbe4a9c3eee0d11e3109, type: 3}
+  rackSetup: {fileID: 11400000, guid: df28042414b8d5349843bbfd4fc392d9, type: 2}
   shotUI: {fileID: 236178587}
   stageHUD: {fileID: 866269368}
   stageScreens: {fileID: 423600017}

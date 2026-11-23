@@ -55,6 +55,20 @@ namespace RoguelikePool
             set { number = value; gameObject.layer = value == 0 ? CueLayer : 0; ApplySettings(); }
         }
         public bool IsCue => Number == 0;
+
+        /// <summary>Number, sprite and type of a colored ball (null for the cue ball).</summary>
+        public BallData Data { get; set; }
+
+        /// <summary>The sprite renderer of the "Visual" child (prefab).</summary>
+        public SpriteRenderer Visual
+        {
+            get
+            {
+                if (visual == null) visual = transform.Find("Visual")?.GetComponent<SpriteRenderer>();
+                return visual;
+            }
+        }
+        SpriteRenderer visual;
         public bool IsPocketed { get; private set; }
 
         public Rigidbody2D Body { get; private set; }
