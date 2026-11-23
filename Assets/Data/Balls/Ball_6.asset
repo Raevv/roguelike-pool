@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be6d47c6b90b2ce4bbafa30e94f84c3a, type: 3}
+  m_Name: Ball_6
+  m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.BallData
+  number: 6
+  sprite: {fileID: 21300000, guid: 603d71a89e5689540b9c2eaeda762281, type: 3}
+  type: 0

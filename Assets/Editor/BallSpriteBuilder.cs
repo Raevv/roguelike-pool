@@ -79,6 +79,33 @@ namespace RoguelikePool.EditorTools
             return maxY - minY + 1;
         }
 
+        public const string DataFolder = "Assets/Data/Balls";
+
+        public static string DataPath(int number) => $"{DataFolder}/Ball_{number}.asset";
+
+        /// <summary>One BallData per colored ball (1-7 and 8 solid, 9-10 stripes). Existing assets are left untouched.</summary>
+        [MenuItem("Tools/Roguelike Pool/Balls/3 Create BallData assets")]
+        public static string CreateBallData()
+        {
+            if (!AssetDatabase.IsValidFolder(DataFolder))
+                AssetDatabase.CreateFolder("Assets/Data", "Balls");
+            var log = new System.Text.StringBuilder();
+            for (int n = 1; n <= 10; n++)
+            {
+                string path = DataPath(n);
+                if (AssetDatabase.LoadAssetAtPath<BallData>(path) != null) { log.AppendLine("existe déjà " + path); continue; }
+                var data = ScriptableObject.CreateInstance<BallData>();
+                data.number = n;
+                data.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath(n));
+                data.type = BallFactory.IsStripe(n) ? BallType.Stripe : BallType.Solid;
+                AssetDatabase.CreateAsset(data, path);
+                log.AppendLine($"créé {path} : {n}, {data.type}, sprite {(data.sprite != null ? data.sprite.name : "MANQUANT")}");
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("[BallSprites] " + log);
+            return log.ToString();
+        }
+
         [MenuItem("Tools/Roguelike Pool/Balls/2 Build Ball + CueBall prefabs")]
         public static string BuildPrefabs()
         {
