@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea2ac7889594ca144b18c776be2c13b8, type: 3}
   m_Name: BallPhysicsSettings
   m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.BallPhysicsSettings
-  maxShotSpeed: 80
+  maxShotSpeed: 120
   cueBall:
-    mass: 0.15
-    rollingDeceleration: 15
+    mass: 0.2
+    rollingDeceleration: 20
     linearDrag: 0.1
     bounciness: 1
   coloredBalls:
-    mass: 0.1
-    rollingDeceleration: 10
-    linearDrag: 0.12
+    mass: 0.16
+    rollingDeceleration: 15
+    linearDrag: 0.2
     bounciness: 1
   cushionBounciness: 0.86
   stopSpeed: 0.8

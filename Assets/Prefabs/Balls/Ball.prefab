@@ -97,7 +97,7 @@ CircleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: 0.01, y: 0}
   m_Radius: 0.5
 --- !u!114 &6656913138893410642
 MonoBehaviour:
@@ -112,6 +112,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoguelikePool.Ball
   fallDuration: 0.18
+  rotateVisual: 1
 --- !u!114 &2396171951039919467
 MonoBehaviour:
   m_ObjectHideFlags: 0
