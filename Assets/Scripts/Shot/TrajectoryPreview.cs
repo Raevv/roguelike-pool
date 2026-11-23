@@ -73,8 +73,8 @@ namespace RoguelikePool
 
         SpriteRenderer CreateGhost()
         {
-            // Ring matching the ball sprites, with a faint flat inner tint.
-            const int S = BallArt.Size;
+            // Ring about the size of a ball (21 art px at 24 px/unit ≈ the 0.894 diameter), with a faint flat inner tint.
+            const int S = 21;
             var px = new Color32[S * S];
             const float r = S / 2f;
             for (int y = 0; y < S; y++)

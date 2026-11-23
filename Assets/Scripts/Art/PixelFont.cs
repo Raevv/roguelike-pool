@@ -5,7 +5,7 @@ namespace RoguelikePool
 {
     /// <summary>
     /// Tiny bitmap fonts drawn straight into pixel buffers: a 5x7 font for the UI (uppercase,
-    /// digits, É, a few symbols including /) and a 3x5 digit font for the ball numbers.
+    /// digits, É, a few symbols including /).
     /// Buffers are bottom-up (Unity texture layout); positions given here are the glyph's top-left.
     /// </summary>
     public static class PixelFont
@@ -62,22 +62,6 @@ namespace RoguelikePool
             [' '] = new[] { ".....", ".....", ".....", ".....", ".....", ".....", "....." },
         };
 
-        static readonly string[][] Digits3x5 =
-        {
-            new[] { "###", "#.#", "#.#", "#.#", "###" },
-            new[] { ".#.", "##.", ".#.", ".#.", "###" },
-            new[] { "###", "..#", "###", "#..", "###" },
-            new[] { "###", "..#", ".##", "..#", "###" },
-            new[] { "#.#", "#.#", "###", "..#", "..#" },
-            new[] { "###", "#..", "###", "..#", "###" },
-            new[] { "###", "#..", "###", "#.#", "###" },
-            new[] { "###", "..#", "..#", ".#.", ".#." },
-            new[] { "###", "#.#", "###", "#.#", "###" },
-            new[] { "###", "#.#", "###", "..#", "###" },
-        };
-
-        static readonly string[] NarrowOne = { "#", "#", "#", "#", "#" };
-
         public static Vector2Int Measure(string text, int scale = 1, int lineGap = 3)
         {
             var lines = text.ToUpperInvariant().Split('\n');
@@ -120,21 +104,6 @@ namespace RoguelikePool
             tex.SetPixels32(px);
             tex.Apply(false, false);
             return tex;
-        }
-
-        /// <summary>Draws a ball number (3x5 digits, narrow 1 for 10-15) centered on (cx, cy).</summary>
-        public static void DrawBallNumber(Color32[] px, int width, int height, int number, int cx, int cy, Color32 color)
-        {
-            int top = cy + 2;
-            if (number < 10)
-            {
-                DrawRows(px, width, height, Digits3x5[number], cx - 1, top, color, 1);
-            }
-            else
-            {
-                DrawRows(px, width, height, NarrowOne, cx - 2, top, color, 1);
-                DrawRows(px, width, height, Digits3x5[number % 10], cx, top, color, 1);
-            }
         }
 
         static void DrawRows(Color32[] px, int width, int height, string[] rows, int x, int top, Color32 color, int scale)
